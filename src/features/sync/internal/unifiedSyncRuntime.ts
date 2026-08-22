@@ -7,6 +7,7 @@ import type {
   SyncRuntimeSnapshot,
   SyncSendOptions,
   SyncStartContext,
+  SyncSwitchOptions,
   SyncTransportId,
 } from '../contracts';
 import type { ClipboardContent } from '@/types/clipboard';
@@ -70,8 +71,13 @@ export class UnifiedSyncRuntime {
     this.snapshot = { ...this.snapshot, status: 'idle' };
   }
 
-  start(context: SyncStartContext): Promise<void> {
+  start(
+    context: SyncStartContext,
+    transport: SyncTransportId = this.snapshot.activeTransport
+  ): Promise<void> {
     if (this.startInFlight) return this.startInFlight;
+    this.requiredAdapter(transport);
+    this.snapshot = { ...this.snapshot, activeTransport: transport };
     this.startContext = context;
     const operation = this.performStart(context);
     this.startInFlight = operation;
@@ -104,8 +110,8 @@ export class UnifiedSyncRuntime {
     this.attachAdapterEvents(adapter);
   }
 
-  switchTo(transport: SyncTransportId): Promise<void> {
-    const operation = this.switchQueue.then(() => this.performSwitch(transport));
+  switchTo(transport: SyncTransportId, options?: SyncSwitchOptions): Promise<void> {
+    const operation = this.switchQueue.then(() => this.performSwitch(transport, false, options));
     this.switchQueue = operation.catch(() => undefined);
     return operation;
   }
@@ -118,7 +124,11 @@ export class UnifiedSyncRuntime {
     return operation;
   }
 
-  private async performSwitch(transport: SyncTransportId, restart = false): Promise<void> {
+  private async performSwitch(
+    transport: SyncTransportId,
+    restart = false,
+    options?: SyncSwitchOptions
+  ): Promise<void> {
     if (!restart && transport === this.snapshot.activeTransport) {
       if (this.startInFlight) await this.startInFlight;
       if (this.snapshot.status === 'ready') return;
@@ -142,6 +152,16 @@ export class UnifiedSyncRuntime {
     try {
       await target.start(context);
     } catch (error) {
+      if (options?.rollbackOnFailure === false) {
+        this.snapshot = {
+          ...this.snapshot,
+          activeTransport: transport,
+          pendingTransport: null,
+          status: 'failed',
+          lastError: this.errorMessage(error),
+        };
+        throw error;
+      }
       try {
         await target.stop();
       } catch {

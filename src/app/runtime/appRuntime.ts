@@ -18,7 +18,7 @@ import { createLogger } from '@/support/observability';
 import { shouldRunBackgroundSync } from '@/utils/syncDirectionPolicy';
 import { getCurrentNetworkContext } from '@/platform/network';
 import type { AppSettings } from '@/types/settings';
-import type { SyncRuntimePolicy, UnifiedSyncRuntime } from '@/features/sync';
+import type { SyncRuntimePolicy, SyncTransportId, UnifiedSyncRuntime } from '@/features/sync';
 
 const log = createLogger('AppRuntime');
 
@@ -77,6 +77,7 @@ export class AppRuntime {
   private startPromise: Promise<void> | null = null;
   private refreshPromise: Promise<void> | null = null;
   private refreshPending = false;
+  private selectedTransport: SyncTransportId | null = null;
   private constructor(private readonly dependencies: AppRuntimeDependencies) {}
 
   static getInstance(dependencies: AppRuntimeDependencies): AppRuntime {
@@ -192,16 +193,38 @@ export class AppRuntime {
     const startedAt = Date.now();
     log.info('Starting selected sync transport');
     const applicationVersion = this.dependencies.applicationVersion() ?? 'unknown';
-    await this.dependencies.sync().start({
-      appVersion: normalizeEngineApplicationVersion(applicationVersion),
-      profileId: 'default',
-      policy: this.getSyncRuntimePolicy(),
-    });
+    const transport = this.getSelectedTransport();
+    this.selectedTransport = transport;
+    await this.dependencies.sync().start(
+      {
+        appVersion: normalizeEngineApplicationVersion(applicationVersion),
+        profileId: 'default',
+        policy: this.getSyncRuntimePolicy(),
+      },
+      transport
+    );
     log.info(`Selected sync transport started in ${Date.now() - startedAt}ms`);
   }
 
   private async _refreshUnifiedSync(): Promise<void> {
+    const transport = this.getSelectedTransport();
+    if (transport !== this.selectedTransport) {
+      this.selectedTransport = transport;
+      await this.dependencies.sync().switchTo(transport, { rollbackOnFailure: false });
+      return;
+    }
     await this.dependencies.sync().refresh(this.getSyncRuntimePolicy());
+  }
+
+  private getSelectedTransport(): SyncTransportId {
+    const config = this.dependencies.settingsStore.getState().config;
+    if (
+      config?.activeLanServerId &&
+      config.lanServers?.some((server) => server.id === config.activeLanServerId)
+    ) {
+      return 'lan';
+    }
+    return 'p2p';
   }
 
   private async _drainRefreshes(): Promise<void> {

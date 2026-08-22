@@ -79,11 +79,14 @@ describe('BackgroundServiceManager sync policy', () => {
   it('starts the selected transport with background sync enabled', async () => {
     await getAppRuntime().start();
 
-    expect(sync.start).toHaveBeenCalledWith({
-      appVersion: '1.0.0',
-      profileId: 'default',
-      policy: { appState: 'background', backgroundSyncEnabled: true },
-    });
+    expect(sync.start).toHaveBeenCalledWith(
+      {
+        appVersion: '1.0.0',
+        profileId: 'default',
+        policy: { appState: 'background', backgroundSyncEnabled: true },
+      },
+      'p2p'
+    );
   });
 
   it('disables background sync while tasks are temporarily paused', async () => {

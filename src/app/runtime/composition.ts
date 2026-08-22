@@ -33,6 +33,9 @@ import {
   P2pSyncAdapter,
 } from '@/features/sync';
 import { configureProductionLanServerService } from '@/features/lan-servers/production';
+import { getLanServerService } from '@/features/lan-servers';
+import { LanSyncAdapter } from '@/features/lan-sync';
+import { applyLanRemoteText } from '@/features/lan-sync/production';
 
 let configured = false;
 
@@ -68,6 +71,15 @@ export function configureAppRuntime(): void {
           observeClipboardChange: (dispatch) => nativeEngine.observeClipboardChange(dispatch),
           persistDelivery: persistP2pDeliveryReport,
         },
+      }),
+      new LanSyncAdapter({
+        async getActiveServer() {
+          const config = useSettingsStore.getState().config;
+          if (!config?.activeLanServerId) return null;
+          return getLanServerService().getDraft(config.activeLanServerId);
+        },
+        readClipboard: () => clipboardManager.getClipboardContent(),
+        applyRemoteText: applyLanRemoteText,
       }),
     ],
     'p2p'

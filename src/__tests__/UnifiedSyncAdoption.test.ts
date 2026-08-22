@@ -17,6 +17,14 @@ describe('unified sync adoption', () => {
     expect(composition).toContain('sync: getUnifiedSyncRuntime');
   });
 
+  it('constructs the LAN adapter beside P2P in the composition root', () => {
+    const composition = source('src/app/runtime/composition.ts');
+
+    expect(composition).toContain('new LanSyncAdapter');
+    expect(composition).toContain('applyLanRemoteText');
+    expect(composition).toContain('getUnifiedSyncRuntime().observeClipboardChange');
+  });
+
   it.each([
     'src/screens/useHomeController.ts',
     'src/screens/ProcessTextScreen.tsx',

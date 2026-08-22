@@ -12,7 +12,7 @@ function deferred<T>() {
 
 function loadUnifiedSyncRuntime():
   | (new (adapters: unknown[], initialTransport: string) => {
-      start(context: unknown): Promise<void>;
+      start(context: unknown, transport?: string): Promise<void>;
       sendImportedText(
         text: string,
         profileHash: string,
@@ -30,7 +30,7 @@ function loadUnifiedSyncRuntime():
       handleAppStateChange(policy: unknown): void;
       stop(): Promise<void>;
       restart(): Promise<void>;
-      switchTo(transport: string): Promise<void>;
+      switchTo(transport: string, options?: { rollbackOnFailure?: boolean }): Promise<void>;
       subscribe(listener: (event: unknown) => void): () => void;
       getSnapshot(): unknown;
     })
@@ -95,6 +95,30 @@ describe('UnifiedSyncRuntime', () => {
       lastError: null,
       lastEvent: null,
     });
+  });
+
+  it('can select a registered adapter for initial startup', async () => {
+    const UnifiedSyncRuntime = loadUnifiedSyncRuntime();
+    expect(UnifiedSyncRuntime).toBeDefined();
+    if (!UnifiedSyncRuntime) return;
+    const p2p = adapter('p2p');
+    const lan = adapter('lan');
+    const runtime = new UnifiedSyncRuntime([p2p, lan], 'p2p');
+
+    await runtime.start(
+      {
+        appVersion: '2.0.0+build.179',
+        profileId: 'default',
+        policy: { appState: 'active', backgroundSyncEnabled: true },
+      },
+      'lan'
+    );
+
+    expect(lan.start).toHaveBeenCalledTimes(1);
+    expect(p2p.start).not.toHaveBeenCalled();
+    expect(runtime.getSnapshot()).toEqual(
+      expect.objectContaining({ activeTransport: 'lan', status: 'ready' })
+    );
   });
 
   it('sends imported text through the active adapter', async () => {
@@ -171,6 +195,34 @@ describe('UnifiedSyncRuntime', () => {
       activeTransport: 'p2p',
       pendingTransport: null,
       status: 'ready',
+      lastError: 'LAN unavailable',
+      lastEvent: null,
+    });
+  });
+
+  it('does not restart P2P when an explicitly selected LAN adapter fails', async () => {
+    const UnifiedSyncRuntime = loadUnifiedSyncRuntime();
+    expect(UnifiedSyncRuntime).toBeDefined();
+    if (!UnifiedSyncRuntime) return;
+    const p2p = adapter('p2p');
+    const lan = adapter('lan');
+    lan.start.mockRejectedValueOnce(new Error('LAN unavailable'));
+    const runtime = new UnifiedSyncRuntime([p2p, lan], 'p2p');
+    await runtime.start({
+      appVersion: '2.0.0+build.179',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: true },
+    });
+
+    await expect(runtime.switchTo('lan', { rollbackOnFailure: false })).rejects.toThrow(
+      'LAN unavailable'
+    );
+
+    expect(p2p.start).toHaveBeenCalledTimes(1);
+    expect(runtime.getSnapshot()).toEqual({
+      activeTransport: 'lan',
+      pendingTransport: null,
+      status: 'failed',
       lastError: 'LAN unavailable',
       lastEvent: null,
     });

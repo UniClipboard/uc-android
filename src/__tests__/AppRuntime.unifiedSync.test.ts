@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { configureAppRuntime, getAppRuntime } from '../app/runtime';
 
 let appStateListener: ((state: 'active' | 'background' | 'inactive') => void) | null = null;
+let settingsListener:
+  | ((state: typeof settingsState, previous: typeof settingsState) => void)
+  | null = null;
 
 jest.mock('react-native', () => ({
   AppState: {
@@ -21,17 +24,26 @@ const sync = {
   switchTo: jest.fn(async () => undefined),
 };
 
+let settingsState = {
+  isLoaded: true,
+  config: {
+    enableForegroundNotification: false,
+    activeLanServerId: 'lan-1',
+    lanServers: [{ id: 'lan-1' }],
+  },
+  isTempDisabledBackgroundTasks: false,
+  loadConfig: jest.fn(async () => undefined),
+  setEnableBackgroundTasks: jest.fn(),
+  setTempDisabledBackgroundTasks: jest.fn(),
+};
+
 configureAppRuntime({
   settingsStore: {
-    getState: () => ({
-      isLoaded: true,
-      config: { enableForegroundNotification: false },
-      isTempDisabledBackgroundTasks: false,
-      loadConfig: jest.fn(async () => undefined),
-      setEnableBackgroundTasks: jest.fn(),
-      setTempDisabledBackgroundTasks: jest.fn(),
+    getState: () => settingsState,
+    subscribe: jest.fn((listener) => {
+      settingsListener = listener;
+      return jest.fn();
     }),
-    subscribe: jest.fn(() => jest.fn()),
   },
   clipboardStore: { getState: () => ({ startMonitoring: jest.fn(async () => undefined) }) },
   sync: () => sync,
@@ -52,11 +64,14 @@ describe('AppRuntime unified sync ownership', () => {
   it('starts and refreshes through the unified sync runtime', async () => {
     await getAppRuntime().start();
 
-    expect(sync.start).toHaveBeenCalledWith({
-      appVersion: '2.0.0-alpha.3+build.179',
-      profileId: 'default',
-      policy: { appState: 'active', backgroundSyncEnabled: false },
-    });
+    expect(sync.start).toHaveBeenCalledWith(
+      {
+        appVersion: '2.0.0-alpha.3+build.179',
+        profileId: 'default',
+        policy: { appState: 'active', backgroundSyncEnabled: false },
+      },
+      'lan'
+    );
 
     appStateListener?.('inactive');
     expect(sync.handleAppStateChange).toHaveBeenCalledWith({
@@ -70,5 +85,14 @@ describe('AppRuntime unified sync ownership', () => {
       appState: 'active',
       backgroundSyncEnabled: false,
     });
+
+    const previous = settingsState;
+    settingsState = {
+      ...settingsState,
+      config: { enableForegroundNotification: false, activeLanServerId: null, lanServers: [] },
+    };
+    settingsListener?.(settingsState, previous);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sync.switchTo).toHaveBeenCalledWith('p2p', { rollbackOnFailure: false });
   });
 });

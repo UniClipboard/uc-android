@@ -19,6 +19,10 @@ export interface SyncSendOptions {
   targetIds?: string[];
 }
 
+export interface SyncSwitchOptions {
+  rollbackOnFailure?: boolean;
+}
+
 export interface SyncImportedAsset {
   kind: 'image' | 'file';
   uri: string;
