@@ -293,5 +293,50 @@
     "manage": { "title": "Space actions" },
     "advanced": { "title": "Advanced" },
     "danger": { "title": "Danger zone" }
+  },
+  "lan": {
+    "title": "Local network servers",
+    "summary": "Manage HTTP / HTTPS sync servers",
+    "configuredCount_one": "{{count}} server",
+    "configuredCount_other": "{{count}} servers",
+    "active": "Current",
+    "add": "Add server",
+    "edit": "Edit server",
+    "scan": "Scan connection QR code",
+    "scanHint": "Scan the desktop QR code to fill the address and credentials.",
+    "name": "Name",
+    "namePlaceholder": "For example: Home computer",
+    "addresses": "Server addresses",
+    "addressesHint": "Add multiple candidates to try in order.",
+    "addAddress": "Add backup address",
+    "removeAddress": "Remove this address",
+    "credentials": "Credentials",
+    "username": "Username",
+    "password": "Password",
+    "allowInsecureTls": "Allow untrusted HTTPS certificates",
+    "insecureTlsHint": "Use only for a self-signed server you explicitly trust. HTTP is unaffected.",
+    "makeActive": "Make current server",
+    "deleteTitle": "Delete server",
+    "deleteMessage": "The server details and saved password will be removed from this device.",
+    "notAvailableYet": "Server details are saved locally. LAN sync will be connected in the next stage.",
+    "qr": {
+      "title": "Scan server QR code",
+      "hint": "Place the QR code inside the frame",
+      "torch": "Flashlight",
+      "failedTitle": "Unable to read QR code",
+      "rescan": "Scan again",
+      "permissionTitle": "Camera access required",
+      "permissionBody": "UniClip needs the camera to scan a server connection QR code.",
+      "requestPermission": "Allow camera access",
+      "openSettings": "Open system settings",
+      "errors": {
+        "INVALID_SCHEME": "This is not a UniClip server QR code.",
+        "UNSUPPORTED_VERSION": "This QR code version is unsupported. Update the app.",
+        "UNSUPPORTED_SERVICE": "This QR code is not for Mobile LAN.",
+        "PAYLOAD_DECODE_FAILED": "The QR code is damaged. Generate a new one.",
+        "MISSING_FIELD": "The QR code is missing required connection details.",
+        "INVALID_URL": "The server address in the QR code is invalid."
+      }
+    }
   }
 }

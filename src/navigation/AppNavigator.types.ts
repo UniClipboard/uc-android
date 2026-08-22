@@ -2,6 +2,7 @@ import type { UpdateCheckResult } from '@/features/updates';
 
 export type SettingsSubSection =
   | 'space'
+  | 'lanServers'
   | 'history'
   | 'background'
   | 'appearance'
@@ -14,7 +15,11 @@ export type RootStackParamList = {
   Migration: undefined;
   Main: undefined;
   Settings:
-    | { section?: 'space'; deviceId?: string; notificationNavigationRequestId?: number }
+    | {
+        section?: 'space' | 'lanServers';
+        deviceId?: string;
+        notificationNavigationRequestId?: number;
+      }
     | undefined;
   SettingsSub: {
     section: SettingsSubSection;

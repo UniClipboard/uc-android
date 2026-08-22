@@ -24,6 +24,7 @@ import { LogSection } from './LogSection';
 import { DebugSection } from './android/DebugSection';
 import { QuickActionsSection } from './QuickActionsSection';
 import { ClipboardAccessMethodSheetProvider } from './ClipboardAccessMethodSheet';
+import { LanServersPage } from './LanServersPage';
 
 const SettingsSubScreenInner = memo(function SettingsSubScreenInner() {
   const { theme } = useTheme();
@@ -51,6 +52,8 @@ const SettingsSubScreenInner = memo(function SettingsSubScreenInner() {
               notificationNavigationRequestId={route.params.notificationNavigationRequestId}
             />
           )}
+
+          {section === 'lanServers' && <LanServersPage />}
 
           {section === 'history' && <HistorySection />}
 

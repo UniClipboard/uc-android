@@ -86,6 +86,7 @@
     "expo-media-library": "~56.0.7",
     "expo-module-scripts": "~56.0.3",
     "expo-notifications": "~56.0.23",
+    "expo-secure-store": "~56.0.4",
     "expo-sharing": "~56.0.18",
     "expo-sqlite": "~56.0.5",
     "expo-status-bar": "~56.0.4",

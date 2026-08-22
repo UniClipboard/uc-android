@@ -95,6 +95,20 @@ export function SettingsRootPage({
             title={t('space.title', { ns: 'settingsSync' })}
             onPress={() => onNavigate('space')}
           />
+          <SettingsNavRow
+            icon="server.rack"
+            iconColor={settingsTileColors.blue}
+            title={t('lan.title', { ns: 'settingsSync' })}
+            value={
+              config.lanServers.length > 0
+                ? t('lan.configuredCount', {
+                    ns: 'settingsSync',
+                    count: config.lanServers.length,
+                  })
+                : undefined
+            }
+            onPress={() => onNavigate('lanServers')}
+          />
           <IconToggleRow
             icon="arrow.down.doc"
             iconColor={settingsTileColors.green}

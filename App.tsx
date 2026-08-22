@@ -7,6 +7,7 @@ import {
   View,
   Platform,
   AppState,
+  Alert,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from './src/contexts/ThemeContext';
@@ -30,6 +31,10 @@ import { useShareSheetStore } from './src/stores/shareSheetStore';
 import { DeviceTrustDecision } from './src/components/DeviceTrustDecision';
 import { DeviceTrustNotificationObserver } from './src/components/DeviceTrustNotificationObserver';
 import { SpaceOperationResult } from './src/components/SpaceOperationResult';
+import { LanQrScannerHost } from './src/components/LanQrScannerHost';
+import { ingestLanConnectUrl } from './src/features/lan-servers';
+import { openLanServerSettings } from './src/features/lan-servers/openLanServerSettings';
+import i18n from './src/i18n';
 
 const QUICK_UPLOAD_URL = 'uniclipboard://quick-upload';
 const PROCESS_TEXT_URL = 'uniclipboard://process-text';
@@ -74,6 +79,20 @@ function isShareIntentUrl(url: string | null): boolean {
   } catch {
     return false;
   }
+}
+
+function handleLanConnectUrl(url: string | null): boolean {
+  const result = ingestLanConnectUrl(url);
+  if (!result.matched) return false;
+  if (!result.queued) {
+    Alert.alert(
+      i18n.t('settingsSync:lan.qr.failedTitle'),
+      i18n.t(`settingsSync:lan.qr.errors.${result.error}`)
+    );
+    return true;
+  }
+  openLanServerSettings();
+  return true;
 }
 
 export default function App() {
@@ -240,6 +259,7 @@ export default function App() {
       if (config?.debugUrlScheme && Platform.OS === 'android') {
         ToastAndroid.show(`getInitialURL: ${debugUrlLabel(url)}`, ToastAndroid.LONG);
       }
+      if (handleLanConnectUrl(url)) return;
       if (isShareIntentUrl(url)) {
         setShareReceiveOverlay(useShareSheetStore.getState().beginParsing());
         return;
@@ -266,6 +286,7 @@ export default function App() {
       if (config?.debugUrlScheme && Platform.OS === 'android') {
         ToastAndroid.show(`addEventListener url: ${debugUrlLabel(url)}`, ToastAndroid.LONG);
       }
+      if (handleLanConnectUrl(url)) return;
       if (isShareIntentUrl(url)) {
         setShareReceiveOverlay(useShareSheetStore.getState().beginParsing());
         return;
@@ -296,6 +317,7 @@ export default function App() {
         <ThemedStatusBar />
         <DeviceTrustNotificationObserver />
         <AppNavigator />
+        <LanQrScannerHost />
         {shareReceiveOverlay !== null && (
           <View style={StyleSheet.absoluteFill}>
             <ShareReceiveRedirector

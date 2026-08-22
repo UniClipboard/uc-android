@@ -1,7 +1,7 @@
-import { OutlinedTextField, useNativeState } from '@expo/ui/jetpack-compose';
+import { OutlinedTextField, Text, useNativeState } from '@expo/ui/jetpack-compose';
 import type { TextFieldKeyboardType, TextFieldColors } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
-import type { ColorValue } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
 
 export interface AppTextFieldProps {
   value: string;
@@ -27,19 +27,40 @@ export function AppTextField({
   colors,
 }: AppTextFieldProps) {
   const nativeValue = useNativeState(value);
+  const latestNativeValue = useRef(value);
+  useEffect(() => {
+    if (value === latestNativeValue.current) return;
+    latestNativeValue.current = value;
+    nativeValue.set(value);
+  }, [nativeValue, value]);
+  const handleValueChange = useCallback(
+    (nextValue: string) => {
+      latestNativeValue.current = nextValue;
+      onChangeText(nextValue);
+    },
+    [onChangeText]
+  );
+
   return (
     <OutlinedTextField
       value={nativeValue}
-      onValueChange={onChangeText}
+      onValueChange={handleValueChange}
       enabled={disabled !== undefined ? !disabled : undefined}
       singleLine
+      visualTransformation={secure ? 'password' : undefined}
       keyboardOptions={{ keyboardType: secure ? 'password' : keyboardType }}
       colors={colors}
       modifiers={fullWidth ? [fillMaxWidth()] : undefined}
     >
-      {label ? <OutlinedTextField.Label>{label}</OutlinedTextField.Label> : null}
+      {label ? (
+        <OutlinedTextField.Label>
+          <Text>{label}</Text>
+        </OutlinedTextField.Label>
+      ) : null}
       {placeholder ? (
-        <OutlinedTextField.Placeholder>{placeholder}</OutlinedTextField.Placeholder>
+        <OutlinedTextField.Placeholder>
+          <Text>{placeholder}</Text>
+        </OutlinedTextField.Placeholder>
       ) : null}
     </OutlinedTextField>
   );

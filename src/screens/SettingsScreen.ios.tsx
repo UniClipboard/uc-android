@@ -30,6 +30,9 @@ import { ClipboardAccessPage } from './settings/ios/ClipboardAccessPage';
 import { LogSection } from './settings/LogSection';
 import { SpacePage } from './settings/ios/SpacePage';
 import { DeveloperPage } from './settings/ios/DeveloperPage';
+import { LanServersPage } from './settings/ios/LanServersPage';
+import { LanServerEditorSheet } from './settings/ios/LanServerEditorSheet';
+import { usePendingLanConnectStore, type LanConnectIntent } from '@/features/lan-servers';
 import {
   canOpenDeviceTrustPreview,
   openDeviceTrustPreview,
@@ -96,6 +99,10 @@ export const SettingsScreen = () => {
   const [isLeavingPage, setIsLeavingPage] = useState(false);
   const [showSpaceInvitation, setShowSpaceInvitation] = useState(false);
   const [spaceSetupMode, setSpaceSetupMode] = useState<AddSyncConnectionMode | null>(null);
+  const [editingLanServerId, setEditingLanServerId] = useState<string | 'new' | null>(null);
+  const [lanServerIntent, setLanServerIntent] = useState<LanConnectIntent | null>(null);
+  const pendingLanIntent = usePendingLanConnectStore((state) => state.intent);
+  const consumePendingLanIntent = usePendingLanConnectStore((state) => state.consume);
   const deviceManagement = useSpaceDeviceManagement({ allowHighImpactActions: true });
 
   useEffect(() => {
@@ -114,6 +121,22 @@ export const SettingsScreen = () => {
     setActivePage('space');
     setIsLeavingPage(false);
   }, [route.params?.notificationNavigationRequestId, route.params?.section]);
+
+  useEffect(() => {
+    if (route.params?.section !== 'lanServers') return;
+    setActivePage('lanServers');
+    setIsLeavingPage(false);
+  }, [route.params?.section]);
+
+  useEffect(() => {
+    if (!pendingLanIntent) return;
+    const intent = consumePendingLanIntent();
+    if (!intent) return;
+    setActivePage('lanServers');
+    setIsLeavingPage(false);
+    setLanServerIntent(intent);
+    setEditingLanServerId('new');
+  }, [consumePendingLanIntent, pendingLanIntent]);
 
   const handlePresentedChange = useCallback((isPresented: boolean) => {
     setPresented(isPresented);
@@ -137,6 +160,8 @@ export const SettingsScreen = () => {
     deviceManagement.closeDevice();
     setShowSpaceInvitation(false);
     setSpaceSetupMode(null);
+    setEditingLanServerId(null);
+    setLanServerIntent(null);
     setIsLeavingPage(true);
   }, [deviceManagement.closeDevice]);
 
@@ -177,6 +202,19 @@ export const SettingsScreen = () => {
                     />
                   ) : null}
                   {activePage === 'storage' ? <StoragePage onBack={backToRoot} /> : null}
+                  {activePage === 'lanServers' ? (
+                    <LanServersPage
+                      onBack={backToRoot}
+                      onAdd={() => {
+                        setLanServerIntent(null);
+                        setEditingLanServerId('new');
+                      }}
+                      onEdit={(serverId) => {
+                        setLanServerIntent(null);
+                        setEditingLanServerId(serverId);
+                      }}
+                    />
+                  ) : null}
                   {activePage === 'keyboard' ? <KeyboardPage onBack={backToRoot} /> : null}
                   {activePage === 'share' ? <SharePage onBack={backToRoot} /> : null}
                   {activePage === 'clipboard' ? <ClipboardAccessPage onBack={backToRoot} /> : null}
@@ -212,6 +250,17 @@ export const SettingsScreen = () => {
                 onConnected={() => {
                   setSpaceSetupMode(null);
                   return true;
+                }}
+              />
+              <LanServerEditorSheet
+                visible={editingLanServerId !== null}
+                serverId={
+                  editingLanServerId && editingLanServerId !== 'new' ? editingLanServerId : null
+                }
+                initialIntent={lanServerIntent}
+                onClose={() => {
+                  setEditingLanServerId(null);
+                  setLanServerIntent(null);
                 }}
               />
             </ZStack>

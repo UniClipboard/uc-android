@@ -59,6 +59,7 @@
       "@bacons/apple-targets",
       "./plugins/build/withLocalNotificationsOnly.js",
       "expo-notifications",
+      "expo-secure-store",
       ["expo-sharing", { "android": { "enabled": true, "singleShareMimeTypes": ["*/*"] } }],
       [
         "expo-camera",

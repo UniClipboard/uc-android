@@ -32,6 +32,7 @@ import {
   getUnifiedSyncRuntime,
   P2pSyncAdapter,
 } from '@/features/sync';
+import { configureProductionLanServerService } from '@/features/lan-servers/production';
 
 let configured = false;
 
@@ -39,6 +40,7 @@ export function configureAppRuntime(): void {
   if (configured) return;
 
   configureUnifiedEngineService(nativeEngine);
+  configureProductionLanServerService();
   configureOutboundDeliveryCoordinator(getUnifiedEngineService());
   configureUnifiedContentService({
     readClipboard: () => clipboardManager.getClipboardContent(),

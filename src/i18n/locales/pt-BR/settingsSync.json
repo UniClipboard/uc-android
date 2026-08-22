@@ -293,5 +293,50 @@
     "manage": { "title": "Ações do espaço" },
     "advanced": { "title": "Avançado" },
     "danger": { "title": "Zona de perigo" }
+  },
+  "lan": {
+    "title": "Servidores da rede local",
+    "summary": "Gerencie servidores HTTP / HTTPS",
+    "configuredCount_one": "{{count}} servidor",
+    "configuredCount_other": "{{count}} servidores",
+    "active": "Atual",
+    "add": "Adicionar servidor",
+    "edit": "Editar servidor",
+    "scan": "Escanear código QR",
+    "scanHint": "Escaneie o QR do computador para preencher endereço e credenciais.",
+    "name": "Nome",
+    "namePlaceholder": "Por exemplo: Computador de casa",
+    "addresses": "Endereços do servidor",
+    "addressesHint": "Adicione vários endereços na ordem de tentativa.",
+    "addAddress": "Adicionar endereço alternativo",
+    "removeAddress": "Remover este endereço",
+    "credentials": "Credenciais",
+    "username": "Usuário",
+    "password": "Senha",
+    "allowInsecureTls": "Permitir certificados HTTPS não confiáveis",
+    "insecureTlsHint": "Use somente com servidor autoassinado confiável. Não afeta HTTP.",
+    "makeActive": "Definir como atual",
+    "deleteTitle": "Excluir servidor",
+    "deleteMessage": "Os dados do servidor e a senha serão removidos deste dispositivo.",
+    "notAvailableYet": "Os dados ficam salvos localmente. A sincronização LAN será conectada na próxima etapa.",
+    "qr": {
+      "title": "Escanear QR do servidor",
+      "hint": "Coloque o código QR dentro da moldura",
+      "torch": "Lanterna",
+      "failedTitle": "Não foi possível ler o QR",
+      "rescan": "Escanear novamente",
+      "permissionTitle": "Acesso à câmera necessário",
+      "permissionBody": "O UniClip usa a câmera para escanear o QR de conexão.",
+      "requestPermission": "Permitir câmera",
+      "openSettings": "Abrir ajustes",
+      "errors": {
+        "INVALID_SCHEME": "Este não é um QR de servidor UniClip.",
+        "UNSUPPORTED_VERSION": "Esta versão do QR não é compatível. Atualize o app.",
+        "UNSUPPORTED_SERVICE": "Este QR não é do Mobile LAN.",
+        "PAYLOAD_DECODE_FAILED": "O QR está danificado. Gere outro.",
+        "MISSING_FIELD": "Faltam dados de conexão no QR.",
+        "INVALID_URL": "O endereço do servidor no QR é inválido."
+      }
+    }
   }
 }

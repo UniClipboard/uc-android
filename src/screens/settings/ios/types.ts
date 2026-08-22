@@ -1,6 +1,7 @@
 export type SettingsPage =
   | 'root'
   | 'space'
+  | 'lanServers'
   | 'storage'
   | 'keyboard'
   | 'share'

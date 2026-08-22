@@ -293,5 +293,50 @@
     "manage": { "title": "空间操作" },
     "advanced": { "title": "高级设置" },
     "danger": { "title": "危险操作" }
+  },
+  "lan": {
+    "title": "局域网服务器",
+    "summary": "管理 HTTP / HTTPS 同步服务器",
+    "configuredCount_one": "{{count}} 台",
+    "configuredCount_other": "{{count}} 台",
+    "active": "当前",
+    "add": "添加服务器",
+    "edit": "编辑服务器",
+    "scan": "扫描连接二维码",
+    "scanHint": "扫描桌面端二维码可自动填写地址和凭据。",
+    "name": "名称",
+    "namePlaceholder": "例如：家里的电脑",
+    "addresses": "服务器地址",
+    "addressesHint": "可添加多个候选地址，按顺序尝试。",
+    "addAddress": "添加备用地址",
+    "removeAddress": "移除此地址",
+    "credentials": "登录凭据",
+    "username": "用户名",
+    "password": "密码",
+    "allowInsecureTls": "允许不受信任的 HTTPS 证书",
+    "insecureTlsHint": "仅用于你明确确认可信的自签名服务器。HTTP 连接不受此开关影响。",
+    "makeActive": "设为当前服务器",
+    "deleteTitle": "删除服务器",
+    "deleteMessage": "服务器资料和保存的密码都会从本机删除。",
+    "notAvailableYet": "服务器资料会保存在本机；LAN 同步将在下一阶段接入。",
+    "qr": {
+      "title": "扫描服务器二维码",
+      "hint": "将二维码放入框内",
+      "torch": "手电筒",
+      "failedTitle": "无法读取二维码",
+      "rescan": "重新扫描",
+      "permissionTitle": "需要相机权限",
+      "permissionBody": "UniClip 需要使用相机扫描服务器连接二维码。",
+      "requestPermission": "允许使用相机",
+      "openSettings": "打开系统设置",
+      "errors": {
+        "INVALID_SCHEME": "这不是 UniClip 服务器二维码。",
+        "UNSUPPORTED_VERSION": "二维码版本暂不支持，请更新应用。",
+        "UNSUPPORTED_SERVICE": "二维码不是 Mobile LAN 服务。",
+        "PAYLOAD_DECODE_FAILED": "二维码内容已损坏，请重新生成。",
+        "MISSING_FIELD": "二维码缺少必要的连接信息。",
+        "INVALID_URL": "二维码中的服务器地址无效。"
+      }
+    }
   }
 }

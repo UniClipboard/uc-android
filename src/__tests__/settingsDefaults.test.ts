@@ -20,6 +20,13 @@ describe('platform settings defaults', () => {
     expect(createDefaultSettings('android').backgroundSyncNetwork).toBe('any');
   });
 
+  it('starts without a configured LAN server', () => {
+    const settings = createDefaultSettings('android');
+
+    expect(settings.lanServers).toEqual([]);
+    expect(settings.activeLanServerId).toBeNull();
+  });
+
   it('enables test updates by default in an Android Alpha installation', () => {
     expect(createDefaultSettings('android', '1.3.0.166-alpha.1').updateToBeta).toBe(true);
   });

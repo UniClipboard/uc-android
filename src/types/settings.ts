@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import { isTestBuildVersion } from '@/features/updates';
+import type { LanServerProfile } from './lan';
 
 export interface SharedSettings {
   // Sync behavior
@@ -8,6 +9,8 @@ export interface SharedSettings {
   autoPushLocal: boolean;
   /** Relay addresses are non-sensitive; access tokens stay in native secure storage. */
   customRelayUrls: string[];
+  lanServers: LanServerProfile[];
+  activeLanServerId: string | null;
 
   // Attachment & cache
   attachmentAutoDownload: 'wifi' | 'always' | 'off';
@@ -79,6 +82,8 @@ export const SHARED_DEFAULTS: SharedSettings = {
   autoApplyRemote: true,
   autoPushLocal: true,
   customRelayUrls: [],
+  lanServers: [],
+  activeLanServerId: null,
 
   attachmentAutoDownload: 'wifi',
   payloadCacheMaxBytes: 200 * 1024 * 1024,
@@ -150,4 +155,4 @@ export const RUNTIME_STATE_DEFAULTS: RuntimeState = {
   needsHistoryReorganize: false,
 };
 
-export const SETTINGS_SCHEMA_VERSION = 9;
+export const SETTINGS_SCHEMA_VERSION = 10;

@@ -35,6 +35,7 @@ import { AnalyticsConsentControl } from './settings/AnalyticsConsentControl';
 // XML 矢量图标(Material Icons 路径),由 @expo/ui Icon 在原生侧解析渲染。
 const ICONS: Record<SettingsSubSection | 'chevron', number> = {
   space: require('../assets/icons/groups.xml'),
+  lanServers: require('../assets/icons/dns.xml'),
   history: require('../assets/icons/history.xml'),
   background: require('../assets/icons/layers.xml'),
   appearance: require('../assets/icons/palette.xml'),
@@ -152,6 +153,14 @@ const SyncHubGroup = memo(function SyncHubGroup({ iconTint, onNavigate }: HubGro
         section="space"
         label={t('space.title', { ns: 'settingsSync' })}
         summary={t('connection.p2pDescription', { ns: 'settingsSync' })}
+        iconTint={iconTint}
+        onNavigate={onNavigate}
+      />
+      <HorizontalDivider />
+      <HubRow
+        section="lanServers"
+        label={t('lan.title', { ns: 'settingsSync' })}
+        summary={t('lan.summary', { ns: 'settingsSync' })}
         iconTint={iconTint}
         onNavigate={onNavigate}
       />
