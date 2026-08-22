@@ -315,6 +315,22 @@
     "password": "Password",
     "allowInsecureTls": "Allow untrusted HTTPS certificates",
     "insecureTlsHint": "Use only for a self-signed server you explicitly trust. HTTP is unaffected.",
+    "probe": {
+      "section": "Test connection",
+      "test": "Test connection",
+      "retest": "Test again",
+      "testing": "Testing…",
+      "success": "At least one address is available.",
+      "authFailed": "The server is reachable, but the username or password is incorrect.",
+      "allUnreachable": "No address is reachable. Check the network and server addresses.",
+      "willUse": "Will use",
+      "results": {
+        "Success": "Connected",
+        "AuthFailed": "Authentication failed",
+        "Unreachable": "Unreachable",
+        "MissingFields": "Enter credentials"
+      }
+    },
     "makeActive": "Make current server",
     "deleteTitle": "Delete server",
     "deleteMessage": "The server details and saved password will be removed from this device.",

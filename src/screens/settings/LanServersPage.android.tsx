@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   Button,
+  CircularProgressIndicator,
   Column,
   Icon,
   ListItem,
@@ -34,6 +35,8 @@ const ICONS = {
   check: require('../../assets/icons/check_circle.xml'),
   chevron: require('../../assets/icons/chevron_right.xml'),
   server: require('../../assets/icons/dns.xml'),
+  unavailable: require('../../assets/icons/close.xml'),
+  wifi: require('../../assets/icons/wifi.xml'),
 };
 const SHEET_TITLE_STYLE = { fontSize: 20, fontWeight: '600', letterSpacing: 0 } as const;
 
@@ -186,6 +189,53 @@ export function LanServersPage() {
                 />
               </ListItem.TrailingContent>
             </ListItem>
+            <Spacer modifiers={[heightModifier(16)]} />
+            <ComposeText style={SHEET_TITLE_STYLE}>{t('lan.probe.section')}</ComposeText>
+            <Spacer modifiers={[heightModifier(8)]} />
+            {editor.probeResults
+              ? editor.urls.map((url, index) => {
+                  const candidate = url.trim();
+                  const result = editor.probeResults?.[candidate];
+                  if (!candidate || !result) return null;
+                  return (
+                    <ListItem key={`lan-probe-${index}`}>
+                      <ListItem.LeadingContent>
+                        <Icon
+                          source={result === 'Success' ? ICONS.check : ICONS.unavailable}
+                          size={20}
+                          tint={result === 'Success' ? colors.primary : colors.error}
+                        />
+                      </ListItem.LeadingContent>
+                      <ListItem.HeadlineContent>
+                        <ComposeText>{candidate}</ComposeText>
+                      </ListItem.HeadlineContent>
+                      <ListItem.SupportingContent>
+                        <ComposeText color={colors.onSurfaceVariant}>
+                          {t(`lan.probe.results.${result}`)}
+                          {candidate === editor.preferredProbeUrl
+                            ? ` · ${t('lan.probe.willUse')}`
+                            : ''}
+                        </ComposeText>
+                      </ListItem.SupportingContent>
+                    </ListItem>
+                  );
+                })
+              : null}
+            {editor.isProbing ? (
+              <CircularProgressIndicator />
+            ) : (
+              <Button
+                onClick={() => void editor.probe()}
+                enabled={editor.urls.some((url) => url.trim())}
+                modifiers={[fillMaxWidth()]}
+              >
+                <Icon source={ICONS.wifi} size={18} tint={colors.onPrimary} />
+                <Spacer modifiers={[widthModifier(8)]} />
+                <ComposeText>
+                  {editor.probeResults ? t('lan.probe.retest') : t('lan.probe.test')}
+                </ComposeText>
+              </Button>
+            )}
             {editor.error ? <ComposeText color={colors.error}>{editor.error}</ComposeText> : null}
             <Spacer modifiers={[heightModifier(20)]} />
             <Button

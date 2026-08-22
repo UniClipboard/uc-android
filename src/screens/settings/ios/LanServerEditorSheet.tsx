@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
 import {
   BottomSheet,
   Button,
   Group,
   HStack,
   Image,
+  ProgressView,
   Section,
   SecureField,
+  Spacer,
   Text as SwiftUIText,
   TextField,
   useNativeState,
@@ -23,8 +26,14 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { IosSheetForm, IosSheetPage } from '@/components/ui';
-import { SettingsNavRow, SettingsToggle } from '@/screens/settings/ios/common';
+import {
+  HeaderCircleButton,
+  SettingsNavRow,
+  SettingsToggle,
+} from '@/screens/settings/ios/common';
 import { useLanServerEditor } from '@/features/lan-servers/useLanServerEditor';
+import { parseLanConnectUri } from '@/features/lan-servers';
+import { scanQRCode } from 'qr-scanner';
 import type { LanServerEditorSheetProps } from './LanServerEditorSheet.types';
 
 function NativeTextField({
@@ -79,7 +88,23 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
     initialIntent: props.initialIntent,
     onFinished: props.onClose,
   });
-
+  const handleScan = useCallback(async () => {
+    try {
+      const raw = await scanQRCode(
+        t('action.cancel', { ns: 'common' }),
+        t('lan.qr.hint')
+      );
+      if (!raw) return;
+      const parsed = parseLanConnectUri(raw);
+      if (!parsed.ok) {
+        Alert.alert(t('lan.qr.failedTitle'), t(`lan.qr.errors.${parsed.error}`));
+        return;
+      }
+      editor.applyIntent(parsed.value);
+    } catch {
+      Alert.alert(t('lan.qr.failedTitle'), t('lan.qr.errors.PAYLOAD_DECODE_FAILED'));
+    }
+  }, [editor.applyIntent, t]);
   return (
     <Group>
       <BottomSheet
@@ -89,14 +114,33 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
         }}
       >
         <Group modifiers={[presentationDetents(['large']), presentationDragIndicator('visible')]}>
-          <IosSheetPage title={props.serverId ? t('lan.edit') : t('lan.add')}>
+          <IosSheetPage
+            title={props.serverId ? t('lan.edit') : t('lan.add')}
+            leftSlots={[
+              <HeaderCircleButton
+                key="close"
+                systemName="xmark"
+                accessibilityLabel={t('action.cancel', { ns: 'common' })}
+                onPress={props.onClose}
+              />,
+            ]}
+            rightSlots={[
+              <HeaderCircleButton
+                key="save"
+                systemName="checkmark"
+                accessibilityLabel={t('action.save', { ns: 'common' })}
+                disabled={editor.pending || !editor.canSave}
+                onPress={() => void editor.save()}
+              />,
+            ]}
+          >
             <IosSheetForm>
               <Section footer={<SwiftUIText>{t('lan.scanHint')}</SwiftUIText>}>
                 <SettingsNavRow
                   icon="qrcode.viewfinder"
                   title={t('lan.scan')}
                   showsChevron={false}
-                  onPress={editor.openScanner}
+                  onPress={() => void handleScan()}
                 />
               </Section>
 
@@ -157,14 +201,69 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
                 />
               </Section>
 
+              <Section
+                header={<SwiftUIText>{t('lan.probe.section')}</SwiftUIText>}
+                footer={
+                  editor.probeResults ? (
+                    <SwiftUIText>
+                      {Object.values(editor.probeResults).some((result) => result === 'Success')
+                        ? t('lan.probe.success')
+                        : Object.values(editor.probeResults).some(
+                              (result) => result === 'AuthFailed'
+                            )
+                          ? t('lan.probe.authFailed')
+                          : t('lan.probe.allUnreachable')}
+                    </SwiftUIText>
+                  ) : undefined
+                }
+              >
+                {editor.probeResults
+                  ? editor.urls.map((url, index) => {
+                      const candidate = url.trim();
+                      const result = editor.probeResults?.[candidate];
+                      if (!candidate || !result) return null;
+                      const isPreferred = candidate === editor.preferredProbeUrl;
+                      return (
+                        <HStack key={`lan-probe-${index}`} spacing={8}>
+                          <SwiftUIText>{candidate}</SwiftUIText>
+                          <Spacer />
+                          {isPreferred ? (
+                            <SwiftUIText>{t('lan.probe.willUse')}</SwiftUIText>
+                          ) : null}
+                          <Image
+                            systemName={
+                              result === 'Success'
+                                ? 'checkmark.circle.fill'
+                                : result === 'AuthFailed'
+                                  ? 'lock.trianglebadge.exclamationmark.fill'
+                                  : result === 'MissingFields'
+                                    ? 'circle.dotted'
+                                    : 'xmark.circle'
+                            }
+                          />
+                        </HStack>
+                      );
+                    })
+                  : null}
+                {editor.isProbing ? (
+                  <HStack spacing={8}>
+                    <ProgressView />
+                    <SwiftUIText>{t('lan.probe.testing')}</SwiftUIText>
+                  </HStack>
+                ) : (
+                  <Button
+                    label={
+                      editor.probeResults ? t('lan.probe.retest') : t('lan.probe.test')
+                    }
+                    onPress={() => void editor.probe()}
+                    modifiers={[disabled(!editor.urls.some((url) => url.trim()))]}
+                  />
+                )}
+              </Section>
+
               {editor.error ? <Section><SwiftUIText>{editor.error}</SwiftUIText></Section> : null}
 
               <Section>
-                <Button
-                  label={t('action.save', { ns: 'common' })}
-                  onPress={() => void editor.save()}
-                  modifiers={[disabled(editor.pending || !editor.canSave)]}
-                />
                 {props.serverId && !editor.isActive ? (
                   <Button
                     label={t('lan.makeActive')}
@@ -181,7 +280,6 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
                     onPress={() => void editor.remove()}
                   />
                 ) : null}
-                <Button label={t('action.cancel', { ns: 'common' })} onPress={props.onClose} />
               </Section>
             </IosSheetForm>
           </IosSheetPage>

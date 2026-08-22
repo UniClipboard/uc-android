@@ -15,3 +15,8 @@ export {
 } from './connectUri';
 export { useLanQrScannerStore, usePendingLanConnectStore } from './handoff';
 export { ingestLanConnectUrl, type LanConnectUrlIngestResult } from './deepLink';
+export {
+  probeLanServers,
+  type LanServerProbeResult,
+  type ProbeLanServersInput,
+} from './probeLanServers';

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSettingsStore } from '@/features/settings';
 import { getLanServerService } from './internal/lanServerService';
 import { useLanQrScannerStore } from './handoff';
+import { probeLanServers, type LanServerProbeResult } from './probeLanServers';
 import type { LanConnectIntent } from './connectUri';
 
 export interface UseLanServerEditorOptions {
@@ -25,6 +26,10 @@ export function useLanServerEditor({
   const [password, setPassword] = useState('');
   const [allowInsecureTls, setAllowInsecureTls] = useState(false);
   const [pending, setPending] = useState(false);
+  const [isProbing, setIsProbing] = useState(false);
+  const [probeResults, setProbeResults] = useState<Record<string, LanServerProbeResult> | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
 
   const applyIntent = useCallback((intent: LanConnectIntent) => {
@@ -32,6 +37,7 @@ export function useLanServerEditor({
     setUsername(intent.username);
     setPassword(intent.password);
     if (intent.name) setName(intent.name);
+    setProbeResults(null);
     setError(null);
   }, []);
 
@@ -39,6 +45,8 @@ export function useLanServerEditor({
     if (!visible) return;
     let cancelled = false;
     setPending(Boolean(serverId));
+    setIsProbing(false);
+    setProbeResults(null);
     setError(null);
     void (async () => {
       try {
@@ -70,19 +78,38 @@ export function useLanServerEditor({
   }, [applyIntent, initialIntent, serverId, visible]);
 
   const updateUrl = useCallback((index: number, value: string) => {
+    setProbeResults(null);
     setUrls((current) =>
       current.map((url, currentIndex) => (currentIndex === index ? value : url))
     );
   }, []);
-  const addUrl = useCallback(() => setUrls((current) => [...current, '']), []);
-  const removeUrl = useCallback(
-    (index: number) =>
-      setUrls((current) => {
-        const next = current.filter((_, currentIndex) => currentIndex !== index);
-        return next.length > 0 ? next : [''];
-      }),
-    []
-  );
+  const addUrl = useCallback(() => {
+    setProbeResults(null);
+    setUrls((current) => [...current, '']);
+  }, []);
+  const removeUrl = useCallback((index: number) => {
+    setProbeResults(null);
+    setUrls((current) => {
+      const next = current.filter((_, currentIndex) => currentIndex !== index);
+      return next.length > 0 ? next : [''];
+    });
+  }, []);
+  const changeName = useCallback((value: string) => {
+    setProbeResults(null);
+    setName(value);
+  }, []);
+  const changeUsername = useCallback((value: string) => {
+    setProbeResults(null);
+    setUsername(value);
+  }, []);
+  const changePassword = useCallback((value: string) => {
+    setProbeResults(null);
+    setPassword(value);
+  }, []);
+  const changeAllowInsecureTls = useCallback((value: boolean) => {
+    setProbeResults(null);
+    setAllowInsecureTls(value);
+  }, []);
   const openScanner = useCallback(() => {
     useLanQrScannerStore.getState().open(applyIntent);
   }, [applyIntent]);
@@ -133,29 +160,53 @@ export function useLanServerEditor({
     }
   }, [loadConfig, serverId]);
 
+  const probe = useCallback(async () => {
+    setIsProbing(true);
+    setProbeResults(null);
+    try {
+      setProbeResults(await probeLanServers({ urls, username, password }));
+    } finally {
+      setIsProbing(false);
+    }
+  }, [password, urls, username]);
+
   const canSave = useMemo(
     () => urls.some((url) => url.trim()) && Boolean(username.trim()) && password.length > 0,
     [password.length, urls, username]
   );
+  const preferredProbeUrl = useMemo(() => {
+    if (!probeResults) return null;
+    return (
+      urls
+        .map((url) => url.trim())
+        .find((url) => probeResults[url] === 'Success' || probeResults[url] === 'AuthFailed') ??
+      null
+    );
+  }, [probeResults, urls]);
 
   return {
     name,
-    setName,
+    setName: changeName,
     urls,
     updateUrl,
     addUrl,
     removeUrl,
     username,
-    setUsername,
+    setUsername: changeUsername,
     password,
-    setPassword,
+    setPassword: changePassword,
     allowInsecureTls,
-    setAllowInsecureTls,
+    setAllowInsecureTls: changeAllowInsecureTls,
     pending,
+    isProbing,
+    probeResults,
+    preferredProbeUrl,
     error,
     canSave,
     isActive: serverId !== null && serverId === activeServerId,
+    applyIntent,
     openScanner,
+    probe,
     save,
     remove,
     select,

@@ -315,6 +315,22 @@
     "password": "Senha",
     "allowInsecureTls": "Permitir certificados HTTPS não confiáveis",
     "insecureTlsHint": "Use somente com servidor autoassinado confiável. Não afeta HTTP.",
+    "probe": {
+      "section": "Testar conexão",
+      "test": "Testar conexão",
+      "retest": "Testar novamente",
+      "testing": "Testando…",
+      "success": "Pelo menos um endereço está disponível.",
+      "authFailed": "O servidor está acessível, mas o usuário ou a senha está incorreto.",
+      "allUnreachable": "Nenhum endereço está acessível. Verifique a rede e os endereços.",
+      "willUse": "Será usado",
+      "results": {
+        "Success": "Conectado",
+        "AuthFailed": "Falha na autenticação",
+        "Unreachable": "Inacessível",
+        "MissingFields": "Informe as credenciais"
+      }
+    },
     "makeActive": "Definir como atual",
     "deleteTitle": "Excluir servidor",
     "deleteMessage": "Os dados do servidor e a senha serão removidos deste dispositivo.",

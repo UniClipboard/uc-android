@@ -18,7 +18,7 @@ describe('LAN server UI ownership', () => {
     expect(app).not.toMatch(/console\.(?:log|info|warn|error).*connect/i);
   });
 
-  it('owns the QR scanner at the stable application root', () => {
+  it('keeps the Android QR scanner at the stable application root', () => {
     const app = source('App.tsx');
     const scanner = source('src/components/LanQrScannerModal.tsx');
 
@@ -26,6 +26,23 @@ describe('LAN server UI ownership', () => {
     expect(app).toContain('<LanQrScannerHost />');
     expect(scanner).toContain('permissionRequested.current = true;');
     expect(scanner).toContain('permissionRequested.current = false;');
+  });
+
+  it('presents the iOS scanner above the active native server sheet', () => {
+    const host = source('src/components/LanQrScannerHost.ios.tsx');
+    const editor = source('src/screens/settings/ios/LanServerEditorSheet.tsx');
+    const nativeScanner = source('modules/qr-scanner/ios/QrScannerModule.swift');
+
+    expect(host).toContain('return null');
+    expect(editor).toContain("import { scanQRCode } from 'qr-scanner';");
+    expect(editor).toContain('await scanQRCode(');
+    expect(nativeScanner).toContain(
+      'while let presented = topViewController.presentedViewController'
+    );
+    expect(nativeScanner).toContain('visibleChildViewController');
+    expect(nativeScanner).toContain('topViewController.children.reversed()');
+    expect(nativeScanner).toContain('scanner.modalPresentationStyle = .fullScreen');
+    expect(nativeScanner).toContain('topViewController.present(scanner, animated: true)');
   });
 
   it('keeps platform navigation policy outside the shared app component', () => {
@@ -50,6 +67,12 @@ describe('LAN server UI ownership', () => {
     expect(page).not.toContain('LanServerEditorSheet');
     expect(editor).toContain('if (value === latestNativeValue.current) return;');
     expect(editor).toContain('onTextChange={handleTextChange}');
+    expect(editor).toContain("t('lan.probe.test')");
+    expect(editor).toContain('editor.probeResults');
+    expect(editor).toContain('systemName="xmark"');
+    expect(editor).toContain('systemName="checkmark"');
+    expect(editor).toContain('disabled={editor.pending || !editor.canSave}');
+    expect(editor).not.toContain("<Button label={t('action.cancel', { ns: 'common' })}");
   });
 
   it('uses full-width Android list rows and a screen-owned editor sheet', () => {
@@ -59,6 +82,8 @@ describe('LAN server UI ownership', () => {
     expect(page).toContain('<ModalBottomSheet');
     expect(page).toContain('usePendingLanConnectStore');
     expect(page).toContain('verticalScroll()');
+    expect(page).toContain("t('lan.probe.test')");
+    expect(page).toContain('editor.probeResults');
   });
 
   it('wraps Android text-field labels and placeholders in Compose text', () => {

@@ -315,6 +315,22 @@
     "password": "密码",
     "allowInsecureTls": "允许不受信任的 HTTPS 证书",
     "insecureTlsHint": "仅用于你明确确认可信的自签名服务器。HTTP 连接不受此开关影响。",
+    "probe": {
+      "section": "测试连接",
+      "test": "测试连接",
+      "retest": "重新测试",
+      "testing": "正在测试…",
+      "success": "至少一个地址可用。",
+      "authFailed": "服务器可达，但用户名或密码不正确。",
+      "allUnreachable": "所有地址均不可达，请检查网络和服务器地址。",
+      "willUse": "将使用",
+      "results": {
+        "Success": "连接成功",
+        "AuthFailed": "认证失败",
+        "Unreachable": "不可达",
+        "MissingFields": "请填写凭据"
+      }
+    },
     "makeActive": "设为当前服务器",
     "deleteTitle": "删除服务器",
     "deleteMessage": "服务器资料和保存的密码都会从本机删除。",
