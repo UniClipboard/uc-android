@@ -46,7 +46,7 @@ describe('captured clipboard dispatch', () => {
       configureClipboardObserver(observe);
       await notifyDeviceClipboardChanged(content);
 
-      expect(observe).toHaveBeenCalledWith(true);
+      expect(observe).toHaveBeenCalledWith(content, true);
     }
   );
 });

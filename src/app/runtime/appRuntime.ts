@@ -3,7 +3,7 @@
  * 统一管理所有 JS 侧后台服务的生命周期。
  *
  * 负责管理：
- * - P2P engine
+ * - 当前选中的同步方式
  * - 前台服务（常驻通知）
  * - 剪贴板监控（startMonitoring）
  * - 统计心跳
@@ -18,7 +18,7 @@ import { createLogger } from '@/support/observability';
 import { shouldRunBackgroundSync } from '@/utils/syncDirectionPolicy';
 import { getCurrentNetworkContext } from '@/platform/network';
 import type { AppSettings } from '@/types/settings';
-import type { EngineEvent, UnifiedEngineService } from '@/platform/engine';
+import type { SyncRuntimePolicy, UnifiedSyncRuntime } from '@/features/sync';
 
 const log = createLogger('AppRuntime');
 
@@ -28,14 +28,6 @@ export function normalizeEngineApplicationVersion(version: string): string {
 
   const [, marketingVersion, buildNumber, prerelease = ''] = androidRelease;
   return `${marketingVersion}${prerelease}+build.${buildNumber}`;
-}
-
-export function isDeviceListRefreshEvent(event: EngineEvent): boolean {
-  return (
-    event.type === 'refreshRequired' ||
-    event.type === 'peerPresenceChanged' ||
-    (event.type === 'changed' && event.kind === 'pairing_completed')
-  );
 }
 
 type RuntimeSettingsState = {
@@ -56,20 +48,7 @@ export interface AppRuntimeDependencies {
     ): () => void;
   };
   clipboardStore: { getState(): { startMonitoring(): Promise<void> } };
-  engine(): Pick<
-    UnifiedEngineService,
-    | 'start'
-    | 'setBackgroundSyncPolicy'
-    | 'resume'
-    | 'recoverPeerConnections'
-    | 'cancelPeerRecovery'
-    | 'subscribeEvents'
-  >;
-  space(): {
-    refresh(options?: { afterInvalidation?: boolean }): Promise<{ devices: unknown[] }>;
-    refreshDevices(): Promise<unknown>;
-    refreshDeviceTrust(): Promise<unknown>;
-  };
+  sync(): Pick<UnifiedSyncRuntime, 'start' | 'refresh' | 'handleAppStateChange' | 'switchTo'>;
   statisticsStore: {
     getState(): { recordBackgroundTaskStart(): Promise<void>; updateHeartbeat(): void };
   };
@@ -93,8 +72,6 @@ export class AppRuntime {
   private appStateSub: { remove(): void } | null = null;
   /** 取消对 settingsStore 的订阅 */
   private settingsUnsub: (() => void) | null = null;
-  /** 取消对 Engine 事件的订阅 */
-  private engineEventsUnsub: (() => void) | null = null;
   private currentAppState = AppState.currentState;
   private hasStarted = false;
   private startPromise: Promise<void> | null = null;
@@ -128,7 +105,7 @@ export class AppRuntime {
    * 启动所有服务（幂等）。
    * 由任意 Activity 入口调用。
    * - 始终启动剪贴板监控（前台 UI 需要）
-   * - 始终启动 P2P engine
+   * - 始终启动当前选中的同步方式
    * - 仅在后台任务启用时才启动前台通知和心跳
    * - 始终订阅配置变化以支持动态重启
    */
@@ -154,8 +131,6 @@ export class AppRuntime {
     }
 
     this._subscribeToAppState();
-    this._subscribeToEngineEvents();
-
     // 始终启动剪贴板监控（无论是否启用后台任务，UI 需要感知本地剪贴板变化）
     try {
       await this.dependencies.clipboardStore.getState().startMonitoring();
@@ -163,7 +138,7 @@ export class AppRuntime {
       log.error('Failed to start clipboard monitoring:', e);
     }
 
-    await this._startUnifiedEngine();
+    await this._startUnifiedSync();
 
     // 后台专用服务（前台通知 + 心跳，Android 专属）
     if (Platform.OS === 'android') {
@@ -188,7 +163,7 @@ export class AppRuntime {
 
   /**
    * 停止后台专用服务（前台通知、心跳）。
-   * P2P engine 由应用生命周期统一管理。
+   * 同步运行层由应用生命周期统一管理。
    */
   async stop(): Promise<void> {
     await this._stopBackgroundOnlyServices();
@@ -208,46 +183,25 @@ export class AppRuntime {
   }
 
   async activateP2p(): Promise<void> {
-    await this._startUnifiedEngine();
+    await this.dependencies.sync().switchTo('p2p');
   }
 
   // ─── 私有实现 ─────────────────────────────────────────────
 
-  private async _startUnifiedEngine(): Promise<void> {
-    const service = this.dependencies.engine();
+  private async _startUnifiedSync(): Promise<void> {
     const startedAt = Date.now();
-    log.info('Starting native P2P engine');
+    log.info('Starting selected sync transport');
     const applicationVersion = this.dependencies.applicationVersion() ?? 'unknown';
-    await service.start({
+    await this.dependencies.sync().start({
       appVersion: normalizeEngineApplicationVersion(applicationVersion),
       profileId: 'default',
+      policy: this.getSyncRuntimePolicy(),
     });
-    log.info(`Native P2P engine started in ${Date.now() - startedAt}ms`);
-    await this._refreshUnifiedEngine(startedAt);
+    log.info(`Selected sync transport started in ${Date.now() - startedAt}ms`);
   }
 
-  private async _refreshUnifiedEngine(startedAt = Date.now()): Promise<void> {
-    const service = this.dependencies.engine();
-    await service.setBackgroundSyncPolicy(this.getShouldRunBackground());
-    if (Platform.OS === 'ios') {
-      if (this.currentAppState !== 'active') return;
-      const resumeStartedAt = Date.now();
-      log.info('Resuming P2P foreground session');
-      await service.resume();
-      log.info(`P2P foreground session resumed in ${Date.now() - resumeStartedAt}ms`);
-    }
-    const space = await this.dependencies.space().refresh();
-    log.info('P2P space state', { deviceCount: space.devices.length });
-    log.info(`Selected P2P channel ready in ${Date.now() - startedAt}ms`);
-    if (Platform.OS === 'ios' && this.currentAppState !== 'active') return;
-
-    const recoveryStartedAt = Date.now();
-    log.info('Recovering P2P receiver connections');
-    void service.recoverPeerConnections().then(
-      (report: { online: number }) =>
-        log.info(`P2P receiver recovery finished in ${Date.now() - recoveryStartedAt}ms`, report),
-      (error: unknown) => log.error('Failed to recover P2P peer connections:', error)
-    );
+  private async _refreshUnifiedSync(): Promise<void> {
+    await this.dependencies.sync().refresh(this.getSyncRuntimePolicy());
   }
 
   private async _drainRefreshes(): Promise<void> {
@@ -256,7 +210,7 @@ export class AppRuntime {
     const refreshPromise = (async () => {
       while (this.refreshPending) {
         this.refreshPending = false;
-        await this._refreshUnifiedEngine();
+        await this._refreshUnifiedSync();
 
         if (Platform.OS === 'android') {
           if (this.getShouldRunBackground()) {
@@ -378,11 +332,7 @@ export class AppRuntime {
     this.appStateSub = AppState.addEventListener('change', (state) => {
       const previousState = this.currentAppState;
       this.currentAppState = state;
-
-      if (Platform.OS === 'ios' && (state === 'inactive' || state === 'background')) {
-        this.dependencies.engine().cancelPeerRecovery();
-        return;
-      }
+      this.dependencies.sync().handleAppStateChange(this.getSyncRuntimePolicy());
 
       if (state === 'active' && previousState !== 'active') {
         this.refresh().catch((error) => log.error('Failed to resume services:', error));
@@ -390,26 +340,11 @@ export class AppRuntime {
     });
   }
 
-  private _subscribeToEngineEvents(): void {
-    if (this.engineEventsUnsub) return;
-    this.engineEventsUnsub = this.dependencies.engine().subscribeEvents((event) => {
-      if (event.type === 'deviceTrustChanged' || event.type === 'rePairingRequired') {
-        if (this.currentAppState !== 'active') return;
-        this.dependencies
-          .space()
-          .refresh({ afterInvalidation: true })
-          .catch((error) =>
-            log.error('Failed to refresh space after a device trust event:', error)
-          );
-        return;
-      }
-      if (!isDeviceListRefreshEvent(event)) return;
-      if (this.currentAppState !== 'active') return;
-      this.dependencies
-        .space()
-        .refreshDevices()
-        .catch((error) => log.error('Failed to refresh devices after an engine event:', error));
-    });
+  private getSyncRuntimePolicy(): SyncRuntimePolicy {
+    return {
+      appState: this.currentAppState,
+      backgroundSyncEnabled: this.getShouldRunBackground(),
+    };
   }
 
   private _subscribeToConfigChanges(): void {

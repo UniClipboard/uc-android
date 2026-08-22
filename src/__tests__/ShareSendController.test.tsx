@@ -38,7 +38,10 @@ jest.mock('@/features/transfer', () => ({
   createPendingShareStore: () => ({
     cleanup: (...args: unknown[]) => mockCleanup(...args),
   }),
-  getUnifiedContentService: () => ({
+}));
+
+jest.mock('@/features/sync', () => ({
+  getUnifiedSyncRuntime: () => ({
     sendImportedText: (...args: unknown[]) => mockSendImportedText(...args),
     sendImportedAsset: (...args: unknown[]) => mockSendImportedAsset(...args),
   }),
@@ -172,8 +175,8 @@ describe('useShareSendController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockClaimPending.mockResolvedValue([]);
-    mockSendImportedText.mockResolvedValue({ success: true, deliveryState: 'delivered' });
-    mockSendImportedAsset.mockResolvedValue({ success: true, deliveryState: 'delivered' });
+    mockSendImportedText.mockResolvedValue({ success: true, state: 'delivered' });
+    mockSendImportedAsset.mockResolvedValue({ success: true, state: 'delivered' });
     mockImportTextToHistory.mockResolvedValue({ profileHash: 'HASH-T' });
     mockImportFileToHistory.mockResolvedValue({
       profileHash: 'HASH-F',
@@ -285,7 +288,7 @@ describe('useShareSendController', () => {
 
     expect(mockImportTextToHistory).toHaveBeenCalledWith('hello world');
     expect(mockSendImportedText).toHaveBeenCalledWith('hello world', 'HASH-T', {
-      targetDeviceIds: ['desktop-1'],
+      targetIds: ['desktop-1'],
     });
     expect(mockRecordShareDiagnosticStage).toHaveBeenCalledWith('text-1', 'sent', undefined);
     expect(mockCompleteJob).toHaveBeenCalledWith('text-1');
@@ -356,14 +359,14 @@ describe('useShareSendController', () => {
         mimeType: 'image/jpeg',
       },
       'HASH-F',
-      { targetDeviceIds: ['desktop-1', 'laptop-1'] }
+      { targetIds: ['desktop-1', 'laptop-1'] }
     );
     expect(mockCompleteJob).toHaveBeenCalledWith('image-1');
   });
 
   it('keeps failed jobs claimable and lets the user retry them', async () => {
     mockClaimPending.mockResolvedValue([textJob]);
-    mockSendImportedText.mockResolvedValue({ success: false, deliveryState: 'offline' });
+    mockSendImportedText.mockResolvedValue({ success: false, state: 'offline' });
     renderHarness(jest.fn());
     await settle();
     act(() => {
@@ -379,7 +382,7 @@ describe('useShareSendController', () => {
     expect(current.jobViews[0].sendState).toBe('failed');
 
     // 重试:不重新认领,同一 job 重新发送
-    mockSendImportedText.mockResolvedValue({ success: true, deliveryState: 'delivered' });
+    mockSendImportedText.mockResolvedValue({ success: true, state: 'delivered' });
     await act(async () => {
       await current.retryJob('text-1');
     });
@@ -390,7 +393,7 @@ describe('useShareSendController', () => {
 
   it('explains when the selected device is offline', async () => {
     mockClaimPending.mockResolvedValue([textJob]);
-    mockSendImportedText.mockResolvedValue({ success: false, deliveryState: 'offline' });
+    mockSendImportedText.mockResolvedValue({ success: false, state: 'offline' });
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     renderHarness(jest.fn());
     await settle();
@@ -408,7 +411,7 @@ describe('useShareSendController', () => {
 
   it('keeps a partially delivered job retryable instead of marking it complete', async () => {
     mockClaimPending.mockResolvedValue([textJob]);
-    mockSendImportedText.mockResolvedValue({ success: true, deliveryState: 'partial' });
+    mockSendImportedText.mockResolvedValue({ success: true, state: 'partial' });
     renderHarness(jest.fn());
     await settle();
     act(() => {
@@ -440,7 +443,7 @@ describe('useShareSendController', () => {
   it('completes unsent jobs on close when staging already persisted them (iOS)', async () => {
     mockClaimPending.mockResolvedValue([textJob, imageJob]);
     // 第二个 job 发送失败(offline),保持未发送状态
-    mockSendImportedAsset.mockResolvedValue({ success: false, deliveryState: 'offline' });
+    mockSendImportedAsset.mockResolvedValue({ success: false, state: 'offline' });
     const onClose = jest.fn();
     renderHarness(onClose);
     await settle();

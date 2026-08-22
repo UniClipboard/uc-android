@@ -1,13 +1,13 @@
 /**
  * Process Text Screen
  * 处理来自 Android 文字选中菜单（PROCESS_TEXT）的上传请求。
- * 复用 QuickLoadingPage：落库(importTextToHistory) + 走 Rust 引擎显式推送。
+ * 复用 QuickLoadingPage：落库(importTextToHistory) + 通过当前同步方式显式推送。
  */
 
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuickLoadingPage } from '@/components/QuickLoadingPage';
-import { getUnifiedContentService } from '@/features/transfer';
+import { getUnifiedSyncRuntime } from '@/features/sync';
 import { importTextToHistory } from '@/utils/uploadFile';
 
 interface ProcessTextScreenProps {
@@ -21,7 +21,7 @@ export const ProcessTextScreen: React.FC<ProcessTextScreenProps> = ({ text, onCo
   const task = useCallback(
     async (signal: AbortSignal) => {
       const { profileHash } = await importTextToHistory(text, { signal });
-      await getUnifiedContentService().sendImportedText(text, profileHash);
+      await getUnifiedSyncRuntime().sendImportedText(text, profileHash);
     },
     [text]
   );

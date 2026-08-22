@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuickLoadingPage } from '@/components/QuickLoadingPage';
-import { getUnifiedContentService } from '@/features/transfer';
+import { getUnifiedSyncRuntime } from '@/features/sync';
 
 interface QuickTileLoadingScreenProps {
   onLoadingComplete: () => void;
@@ -15,7 +15,7 @@ export const QuickTileLoadingScreen: React.FC<QuickTileLoadingScreenProps> = ({
   const { t } = useTranslation('sync');
 
   const task = useCallback(async () => {
-    await getUnifiedContentService().sendCurrentClipboard();
+    await getUnifiedSyncRuntime().sendCurrentClipboard();
   }, []);
 
   return (

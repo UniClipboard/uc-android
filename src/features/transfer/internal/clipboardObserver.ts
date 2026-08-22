@@ -1,25 +1,26 @@
 import { AppState } from 'react-native';
-import type { SendReport } from '@/platform/engine';
 import type { ClipboardContent } from '@/types/clipboard';
+import type { SyncDeliveryResult } from '@/features/sync';
 import { useSettingsStore } from '@/features/settings';
 import { canAutoPushInBackground } from '@/utils/syncDirectionPolicy';
 import { getCurrentNetworkContext } from '@/platform/network';
-import { persistP2pDeliveryReport } from './deliveryState';
 import { createLogger } from '@/support/observability';
 
-const log = createLogger('P2pClipboardObserver');
+const log = createLogger('ClipboardSyncObserver');
 
-let observeClipboardChange: ((dispatch: boolean) => Promise<SendReport | null>) | null = null;
+let observeClipboardChange:
+  | ((content: ClipboardContent, dispatch: boolean) => Promise<SyncDeliveryResult | null>)
+  | null = null;
 
 export function configureClipboardObserver(
-  observe: (dispatch: boolean) => Promise<SendReport | null>
+  observe: (content: ClipboardContent, dispatch: boolean) => Promise<SyncDeliveryResult | null>
 ): void {
   observeClipboardChange = observe;
 }
 
 export async function notifyDeviceClipboardChanged(
   content: ClipboardContent
-): Promise<SendReport | null> {
+): Promise<SyncDeliveryResult | null> {
   const settings = useSettingsStore.getState();
   const config = settings.config;
   const appIsBackground = AppState.currentState !== 'active';
@@ -35,9 +36,7 @@ export async function notifyDeviceClipboardChanged(
 
   try {
     if (!observeClipboardChange) throw new Error('The clipboard observer is not configured');
-    const report = await observeClipboardChange(dispatch);
-    if (report) await persistP2pDeliveryReport(content.profileHash, report);
-    return report;
+    return await observeClipboardChange(content, dispatch);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     log.info('Clipboard observation failed; kept local:', detail);

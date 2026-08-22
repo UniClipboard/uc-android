@@ -1,5 +1,6 @@
 import { File } from 'expo-file-system';
 import * as Application from 'expo-application';
+import { Platform } from 'react-native';
 import {
   configureP2pSpaceActivation,
   getP2pSpaceSetupCoordinator,
@@ -15,6 +16,7 @@ import {
   configureClipboardObserver,
   configureOutboundDeliveryCoordinator,
   configureUnifiedContentService,
+  getUnifiedContentService,
   getOutboundDeliveryCoordinator,
 } from '@/features/transfer';
 import { clipboardManager, useClipboardStore } from '@/features/clipboard';
@@ -25,6 +27,11 @@ import { configureNetworkContextChangeListener } from '@/platform/network';
 import { configurePostHogAnalytics } from '@/support/observability';
 import { useStatisticsStore } from '@/stores/statisticsStore';
 import { configureOutboundShareHandoffManager, createPendingShareStore } from '@/features/transfer';
+import {
+  configureUnifiedSyncRuntime,
+  getUnifiedSyncRuntime,
+  P2pSyncAdapter,
+} from '@/features/sync';
 
 let configured = false;
 
@@ -41,18 +48,33 @@ export function configureAppRuntime(): void {
     persistDelivery: persistP2pDeliveryReport,
   });
   configureOutboundShareHandoffManager(createPendingShareStore());
-  configureClipboardObserver((dispatch) => nativeEngine.observeClipboardChange(dispatch));
+  configureClipboardObserver((content, dispatch) =>
+    getUnifiedSyncRuntime().observeClipboardChange(content, dispatch)
+  );
   configureP2pSpaceActivation(() => getUnconfiguredAppRuntime().activateP2p());
   configureUnifiedSpaceService(nativeEngine, (operation) =>
     getP2pSpaceSetupCoordinator().run(operation)
+  );
+  configureUnifiedSyncRuntime(
+    [
+      new P2pSyncAdapter({
+        platform: Platform.OS === 'ios' ? 'ios' : 'android',
+        engine: getUnifiedEngineService(),
+        space: getUnifiedSpaceService(),
+        content: getUnifiedContentService(),
+        clipboard: {
+          observeClipboardChange: (dispatch) => nativeEngine.observeClipboardChange(dispatch),
+          persistDelivery: persistP2pDeliveryReport,
+        },
+      }),
+    ],
+    'p2p'
   );
   configureAnalyticsConsent(nativeEngine);
   configureRelaySettings({
     saveCustomRelayNode: nativeEngine.saveCustomRelayNode,
     async rebuildRelayEndpoint(): Promise<void> {
-      const engine = getUnifiedEngineService();
-      await engine.stop();
-      await getUnconfiguredAppRuntime().activateP2p();
+      await getUnifiedSyncRuntime().restart();
     },
   });
   configurePostHogAnalytics({
@@ -65,8 +87,7 @@ export function configureAppRuntime(): void {
   configureRuntimeDependencies({
     settingsStore: useSettingsStore,
     clipboardStore: useClipboardStore,
-    engine: getUnifiedEngineService,
-    space: getUnifiedSpaceService,
+    sync: getUnifiedSyncRuntime,
     statisticsStore: useStatisticsStore,
     applicationVersion: () => Application.nativeApplicationVersion ?? null,
   });

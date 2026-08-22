@@ -17,11 +17,9 @@ import { useUnifiedEngineStore } from '@/stores/unifiedEngineStore';
 import { useUnifiedSpaceStore } from '@/features/space';
 import { deriveP2pConnectionStatus } from '@/utils/connectionStatus';
 import { historyStorage } from '@/features/history';
-import { getUnifiedContentService } from '@/features/transfer';
-import { getUnifiedEngineService } from '@/platform/engine';
+import { getUnifiedSyncRuntime } from '@/features/sync';
 import { getUnifiedSpaceService } from '@/features/space';
 import {
-  p2pDeliveryCountsFromReport,
   p2pDeliveryCountsFromResend,
   p2pDeliveryStateFromResend,
   p2pDeliveryTranslationOptions,
@@ -469,7 +467,7 @@ export function useHomeController(onOpenSettings: () => void) {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await getUnifiedEngineService().refreshPeerConnections();
+      await getUnifiedSyncRuntime().synchronize();
       await loadItems();
     } finally {
       setRefreshing(false);
@@ -481,7 +479,7 @@ export function useHomeController(onOpenSettings: () => void) {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      await getUnifiedEngineService().refreshPeerConnections();
+      await getUnifiedSyncRuntime().synchronize();
       await loadItems();
       showMessage(t('toast.syncDone'), 'success');
     } catch {
@@ -495,16 +493,13 @@ export function useHomeController(onOpenSettings: () => void) {
   const handleUpload = useCallback(async () => {
     try {
       clearError();
-      const result = await getUnifiedContentService().sendCurrentClipboard();
+      const result = await getUnifiedSyncRuntime().sendCurrentClipboard();
       await loadItems();
       showMessage(
-        t(
-          `toast.p2pDelivery.${result.deliveryState}`,
-          p2pDeliveryTranslationOptions(p2pDeliveryCountsFromReport(result.report))
-        ),
-        result.deliveryState === 'delivered'
+        t(`toast.p2pDelivery.${result.state}`, p2pDeliveryTranslationOptions(result.counts)),
+        result.state === 'delivered'
           ? 'success'
-          : result.deliveryState === 'partial' || result.deliveryState === 'pending'
+          : result.state === 'partial' || result.state === 'pending'
           ? 'info'
           : 'error'
       );
@@ -536,7 +531,7 @@ export function useHomeController(onOpenSettings: () => void) {
       }
 
       try {
-        const sendResult = await getUnifiedContentService().sendImportedAsset(
+        const sendResult = await getUnifiedSyncRuntime().sendImportedAsset(
           {
             kind: result.contentType === 'Image' ? 'image' : 'file',
             uri: result.fileUri,
@@ -548,12 +543,12 @@ export function useHomeController(onOpenSettings: () => void) {
         await loadItems();
         showMessage(
           t(
-            `toast.p2pDelivery.${sendResult.deliveryState}`,
-            p2pDeliveryTranslationOptions(p2pDeliveryCountsFromReport(sendResult.report))
+            `toast.p2pDelivery.${sendResult.state}`,
+            p2pDeliveryTranslationOptions(sendResult.counts)
           ),
-          sendResult.deliveryState === 'delivered'
+          sendResult.state === 'delivered'
             ? 'success'
-            : sendResult.deliveryState === 'partial' || sendResult.deliveryState === 'pending'
+            : sendResult.state === 'partial' || sendResult.state === 'pending'
             ? 'info'
             : 'error'
         );

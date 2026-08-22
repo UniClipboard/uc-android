@@ -23,8 +23,9 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { File } from 'expo-file-system';
 import { recordShareDiagnosticStage } from 'app-group-store';
-import { getOutboundShareHandoffManager, getUnifiedContentService } from '@/features/transfer';
+import { getOutboundShareHandoffManager } from '@/features/transfer';
 import { createPendingShareStore, type PendingShareJob } from '@/features/transfer';
+import { getUnifiedSyncRuntime } from '@/features/sync';
 import { importFileToHistory, importTextToHistory } from '@/utils/uploadFile';
 import { getUnifiedSpaceService, useUnifiedSpaceStore } from '@/features/space';
 import { createLogger } from '@/support/observability';
@@ -174,26 +175,26 @@ export function useShareSendController(onClose: () => void, active: boolean) {
 
   // 发送投递后的统一收尾:只有所有目标确认送达才出队;其他结果保留重试。
   const finishSend = useCallback(
-    async (jobId: string, send: () => Promise<{ deliveryState: string; success: boolean }>) => {
+    async (jobId: string, send: () => Promise<{ state: string; success: boolean }>) => {
       const result = await send();
-      const delivered = result.success && result.deliveryState === 'delivered';
+      const delivered = result.success && result.state === 'delivered';
       void recordShareDiagnosticStage(
         jobId,
         delivered ? 'sent' : 'failed',
-        delivered ? undefined : result.deliveryState
+        delivered ? undefined : result.state
       );
       if (delivered) {
         await getOutboundShareHandoffManager().completeJob(jobId);
         updateJob(jobId, { sendState: 'success' });
-        return { jobId, success: true, deliveryState: result.deliveryState };
+        return { jobId, success: true, deliveryState: result.state };
       }
-      const offline = result.deliveryState === 'offline';
+      const offline = result.state === 'offline';
       const message = t(offline ? 'send.offline' : 'send.failed');
       if (offline) {
         Alert.alert(t('send.offlineTitle'), message);
       }
       updateJob(jobId, { sendState: 'failed', errorMessage: message });
-      return { jobId, success: false, deliveryState: result.deliveryState, errorMessage: message };
+      return { jobId, success: false, deliveryState: result.state, errorMessage: message };
     },
     [updateJob, t]
   );
@@ -210,7 +211,9 @@ export function useShareSendController(onClose: () => void, active: boolean) {
           const { profileHash } = await importTextToHistory(text);
           setPhase({ kind: 'sending', jobId: job.id, stage: 'sending' });
           return await finishSend(job.id, () =>
-            getUnifiedContentService().sendImportedText(text, profileHash, { targetDeviceIds })
+            getUnifiedSyncRuntime().sendImportedText(text, profileHash, {
+              targetIds: targetDeviceIds,
+            })
           );
         }
         const imported = await importFileToHistory(
@@ -222,7 +225,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
         );
         setPhase({ kind: 'sending', jobId: job.id, stage: 'sending' });
         return await finishSend(job.id, () =>
-          getUnifiedContentService().sendImportedAsset(
+          getUnifiedSyncRuntime().sendImportedAsset(
             {
               kind: job.kind === 'image' ? 'image' : 'file',
               uri: imported.fileUri,
@@ -230,7 +233,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
               mimeType: job.mimeType,
             },
             imported.profileHash,
-            { targetDeviceIds }
+            { targetIds: targetDeviceIds }
           )
         );
       } catch (error) {

@@ -15,10 +15,15 @@ const topBars = ['android', 'ios'].map((platform) =>
 );
 
 describe('home content routing', () => {
-  it('routes clipboard, image, and file sends through the unified content service', () => {
-    expect(controller).toContain('getUnifiedContentService');
+  it('routes clipboard, image, and file sends through the unified sync runtime', () => {
+    expect(controller).toContain('getUnifiedSyncRuntime');
     expect(controller).toContain('.sendCurrentClipboard()');
     expect(controller).toContain('.sendImportedAsset(');
+  });
+
+  it('routes manual refresh through the unified sync runtime', () => {
+    expect(controller).toContain('getUnifiedSyncRuntime().synchronize()');
+    expect(controller).not.toContain('getUnifiedEngineService');
   });
 
   it('does not contain the retired upload paths', () => {
@@ -28,7 +33,7 @@ describe('home content routing', () => {
 
   it('waits for imported asset delivery before showing its final result', () => {
     expect(controller).toContain(
-      'const sendResult = await getUnifiedContentService().sendImportedAsset('
+      'const sendResult = await getUnifiedSyncRuntime().sendImportedAsset('
     );
   });
 

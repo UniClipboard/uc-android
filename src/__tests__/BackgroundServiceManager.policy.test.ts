@@ -5,17 +5,12 @@ import {
   normalizeEngineApplicationVersion,
 } from '../app/runtime';
 
-const mockStart = jest.fn(async () => undefined);
-const mockSetBackgroundSyncPolicy = jest.fn(async () => undefined);
-const mockRecoverPeerConnections = jest.fn(async () => ({
-  total: 1,
-  online: 1,
-  offline: 0,
-  errors: 0,
-}));
-const mockSpaceRefresh = jest.fn(async () => ({ devices: [] }));
-const mockSpaceRefreshDevices = jest.fn(async () => ({ devices: [] }));
-const mockSubscribeEvents = jest.fn(() => jest.fn());
+const sync = {
+  start: jest.fn(async () => undefined),
+  refresh: jest.fn(async () => undefined),
+  handleAppStateChange: jest.fn(),
+  switchTo: jest.fn(async () => undefined),
+};
 
 const settingsState = {
   config: {
@@ -29,39 +24,22 @@ const settingsState = {
   isTempDisabledBackgroundTasks: false,
 };
 
-const clipboardStore = { getState: () => ({ startMonitoring: jest.fn(async () => undefined) }) };
-const statisticsStore = {
-  getState: () => ({
-    recordBackgroundTaskStart: jest.fn(async () => undefined),
-    updateHeartbeat: jest.fn(),
-  }),
-};
-
 jest.mock('react-native', () => ({
-  AppState: { currentState: 'background' },
+  AppState: { currentState: 'background', addEventListener: jest.fn() },
   Platform: { OS: 'android' },
 }));
 
-jest.mock('../features/settings', () => ({
-  useSettingsStore: {
-    getState: () => settingsState,
-  },
+jest.mock('native-timer', () => ({
+  setTimer: jest.fn(() => 'heartbeat'),
+  clearTimer: jest.fn(),
 }));
 
-jest.mock('../platform/engine', () => ({
-  getUnifiedEngineService: () => ({
-    start: mockStart,
-    setBackgroundSyncPolicy: mockSetBackgroundSyncPolicy,
-    recoverPeerConnections: mockRecoverPeerConnections,
-    subscribeEvents: mockSubscribeEvents,
-  }),
-}));
-
-jest.mock('../features/space', () => ({
-  getUnifiedSpaceService: () => ({
-    refresh: mockSpaceRefresh,
-    refreshDevices: mockSpaceRefreshDevices,
-  }),
+jest.mock('foreground-service', () => ({
+  startService: jest.fn(),
+  stopService: jest.fn(),
+  isRunning: jest.fn(() => false),
+  addStopListener: jest.fn(() => ({ remove: jest.fn() })),
+  addTempStopListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
 configureAppRuntime({
@@ -75,21 +53,18 @@ configureAppRuntime({
     }),
     subscribe: jest.fn(() => jest.fn()),
   },
-  clipboardStore,
-  engine: () => ({
-    start: mockStart,
-    setBackgroundSyncPolicy: mockSetBackgroundSyncPolicy,
-    resume: jest.fn(async () => undefined),
-    recoverPeerConnections: mockRecoverPeerConnections,
-    cancelPeerRecovery: jest.fn(),
-    subscribeEvents: mockSubscribeEvents,
-  }),
-  space: () => ({ refresh: mockSpaceRefresh, refreshDevices: mockSpaceRefreshDevices }),
-  statisticsStore,
+  clipboardStore: { getState: () => ({ startMonitoring: jest.fn(async () => undefined) }) },
+  sync: () => sync,
+  statisticsStore: {
+    getState: () => ({
+      recordBackgroundTaskStart: jest.fn(async () => undefined),
+      updateHeartbeat: jest.fn(),
+    }),
+  },
   applicationVersion: () => '1.0.0',
 });
 
-describe('BackgroundServiceManager P2P policy', () => {
+describe('BackgroundServiceManager sync policy', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     settingsState.isTempDisabledBackgroundTasks = false;
@@ -101,28 +76,30 @@ describe('BackgroundServiceManager P2P policy', () => {
     expect(normalizeEngineApplicationVersion('2.0.0')).toBe('2.0.0');
   });
 
-  it('starts the engine, refreshes space state, and recovers peer connections', async () => {
-    await getAppRuntime().activateP2p();
+  it('starts the selected transport with background sync enabled', async () => {
+    await getAppRuntime().start();
 
-    expect(mockStart).toHaveBeenCalledWith({ appVersion: '1.0.0', profileId: 'default' });
-    expect(mockSpaceRefresh).toHaveBeenCalledTimes(1);
-    expect(mockRecoverPeerConnections).toHaveBeenCalledTimes(1);
-    expect(mockStart.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRecoverPeerConnections.mock.invocationCallOrder[0]
-    );
-  });
-
-  it('allows background sync when the user policy is enabled', async () => {
-    await getAppRuntime().activateP2p();
-
-    expect(mockSetBackgroundSyncPolicy).toHaveBeenCalledWith(true);
+    expect(sync.start).toHaveBeenCalledWith({
+      appVersion: '1.0.0',
+      profileId: 'default',
+      policy: { appState: 'background', backgroundSyncEnabled: true },
+    });
   });
 
   it('disables background sync while tasks are temporarily paused', async () => {
     settingsState.isTempDisabledBackgroundTasks = true;
 
+    await getAppRuntime().refresh();
+
+    expect(sync.refresh).toHaveBeenLastCalledWith({
+      appState: 'background',
+      backgroundSyncEnabled: false,
+    });
+  });
+
+  it('selects P2P without bypassing the unified runtime', async () => {
     await getAppRuntime().activateP2p();
 
-    expect(mockSetBackgroundSyncPolicy).toHaveBeenCalledWith(false);
+    expect(sync.switchTo).toHaveBeenCalledWith('p2p');
   });
 });
