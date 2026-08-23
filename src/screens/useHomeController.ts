@@ -241,7 +241,7 @@ export function useHomeController(onOpenSettings: () => void) {
   const latestId = items[0]?.profileHash;
 
   // Actions
-  const copyItemWithSync = useCallback(async (item: ClipboardItem) => {
+  const copyItemLocally = useCallback(async (item: ClipboardItem) => {
     const content: ClipboardContent = {
       type: item.type,
       text: item.text,
@@ -256,13 +256,16 @@ export function useHomeController(onOpenSettings: () => void) {
     const result = await copyToLocalClipboard(content);
     if (result.success) {
       useClipboardStore.getState().setCurrentContentDisplay(content);
-      // 用户主动使用某项 = 一次明确的激活:直接发 activate 事件驱动同步(写 activate 寄存器、
-      // 带回该项 content_id、forceTick),不再依赖 ClipboardMonitor 的被动读/抑制机制。
-      void notifyDeviceClipboardChanged(content);
-      // 等待重新定位落盘，让飞入动画能尽快拿到确认后的排序结果，减少起飞前的等待
-      await historyStorage.updateLastAccessed(item.profileHash);
     }
-    return result;
+    return { result, content };
+  }, []);
+
+  const startPostCopyFlow = useCallback((item: ClipboardItem, content: ClipboardContent) => {
+    // 本机复制与提示已经完成。同步和卡片重排都留在后台，不能反向阻塞复制反馈。
+    void notifyDeviceClipboardChanged(content);
+    void historyStorage
+      .updateLastAccessed(item.profileHash)
+      .catch((error) => log.error(`Failed to update copied item order (${getErrorCode(error)})`));
   }, []);
 
   const getCopySuccessMessage = useCallback(
@@ -284,14 +287,23 @@ export function useHomeController(onOpenSettings: () => void) {
 
       // 排序重排后卡片的移动动画由 AnimatedCardGrid/GridCell 按下标变化自动处理，
       // 这里只需要触发复制本身
-      const result = await copyItemWithSync(item);
+      const { result, content } = await copyItemLocally(item);
       if (result.success) {
         showMessage(getCopySuccessMessage(), 'success');
+        startPostCopyFlow(item, content);
       } else {
         showMessage(result.message || t('toast.copyFailed'), 'error');
       }
     },
-    [isSelectMode, toggleSelection, copyItemWithSync, showMessage, getCopySuccessMessage, t]
+    [
+      isSelectMode,
+      toggleSelection,
+      copyItemLocally,
+      showMessage,
+      getCopySuccessMessage,
+      startPostCopyFlow,
+      t,
+    ]
   );
 
   // ── Long-press → 锚定式上下文浮层 ────────────────────────────
@@ -333,11 +345,14 @@ export function useHomeController(onOpenSettings: () => void) {
     ): ActionMenuItem[][] =>
       buildActionMenuGroups(item, displayKind, {
         onCopy: async () => {
-          const result = await copyItemWithSync(item);
+          const { result, content } = await copyItemLocally(item);
           showMessage(
             result.success ? getCopySuccessMessage() : result.message || t('toast.copyFailed'),
             result.success ? 'success' : 'error'
           );
+          if (result.success) {
+            startPostCopyFlow(item, content);
+          }
         },
         onSelectText: () => {
           // 动作经 close(after) 在浮层退场后才执行，那时 contextTarget 已清空——
@@ -428,7 +443,8 @@ export function useHomeController(onOpenSettings: () => void) {
         },
       }),
     [
-      copyItemWithSync,
+      copyItemLocally,
+      startPostCopyFlow,
       showMessage,
       clearSelection,
       toggleSelection,
@@ -770,7 +786,6 @@ export function useHomeController(onOpenSettings: () => void) {
     detailItem,
     selectDetailItem,
     makeActionGroups,
-    copyItemWithSync,
   };
 }
 

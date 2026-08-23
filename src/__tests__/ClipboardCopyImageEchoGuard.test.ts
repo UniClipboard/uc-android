@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 describe('copyToLocalClipboard image echo guard', () => {
-  let getClipboardContent: jest.Mock;
   let setImageContent: jest.Mock;
   let setLastContent: jest.Mock;
   let pausePolling: jest.Mock;
@@ -9,17 +8,6 @@ describe('copyToLocalClipboard image echo guard', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    getClipboardContent = jest.fn().mockResolvedValue({
-      type: 'Image',
-      text: 'image.png',
-      profileHash: 'IOS_REENCODED_HASH',
-      localClipboardHash: 'IOS_REENCODED_HASH',
-      fileUri: 'file:///cache/ios-reencoded.png',
-      fileName: 'image.png',
-      fileSize: 529600,
-      hasData: true,
-      timestamp: 456,
-    });
     setImageContent = jest.fn().mockResolvedValue(undefined);
     setLastContent = jest.fn().mockResolvedValue(undefined);
     pausePolling = jest.fn();
@@ -27,9 +15,9 @@ describe('copyToLocalClipboard image echo guard', () => {
 
     jest.doMock('@/features/clipboard', () => ({
       clipboardManager: {
-        getClipboardContent,
         setClipboardContent: jest.fn(),
         setImageContent,
+        setFileContent: jest.fn(),
       },
       clipboardMonitor: {
         pausePolling,
@@ -39,39 +27,12 @@ describe('copyToLocalClipboard image echo guard', () => {
     }));
   });
 
-  it('watermarks the actual iOS image before clipboard monitoring resumes', async () => {
+  it('returns after the native image write without waiting for watermark persistence', async () => {
     const { copyToLocalClipboard } = require('../utils/clipboard');
-    const original = {
-      type: 'Image' as const,
-      text: 'image.png',
-      profileHash: 'REMOTE_HASH',
-      localClipboardHash: 'REMOTE_HASH',
-      fileUri: 'file:///history/remote-original.png',
-      fileName: 'image.png',
-      fileSize: 982890,
-      hasData: true,
-      timestamp: 123,
-    };
-
-    await expect(copyToLocalClipboard(original)).resolves.toEqual({
-      success: true,
-      message: expect.any(String),
-    });
-
-    expect(setImageContent).toHaveBeenCalledWith(original.fileUri);
-    expect(getClipboardContent).toHaveBeenCalledTimes(1);
-    expect(setLastContent).toHaveBeenCalledWith({
-      ...original,
-      localClipboardHash: 'IOS_REENCODED_HASH',
-    });
-    expect(setLastContent.mock.invocationCallOrder[0]).toBeLessThan(
-      resumePolling.mock.invocationCallOrder[0]
+    let finishPersistence!: () => void;
+    setLastContent.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (finishPersistence = resolve))
     );
-  });
-
-  it('keeps the card copy successful when the post-write image read is unavailable', async () => {
-    const { copyToLocalClipboard } = require('../utils/clipboard');
-    getClipboardContent.mockRejectedValueOnce(new Error('pasteboard read unavailable'));
     const original = {
       type: 'Image' as const,
       text: 'image.png',
@@ -88,7 +49,36 @@ describe('copyToLocalClipboard image echo guard', () => {
       success: true,
       message: expect.any(String),
     });
+
+    expect(setImageContent).toHaveBeenCalledWith(original.fileUri, original.localClipboardHash);
     expect(setLastContent).toHaveBeenCalledWith(original);
     expect(resumePolling).toHaveBeenCalledTimes(1);
+    finishPersistence();
+  });
+
+  it('writes an iOS file URL to the system clipboard', async () => {
+    const { copyToLocalClipboard } = require('../utils/clipboard');
+    const { clipboardManager } = require('@/features/clipboard');
+    const file = {
+      type: 'File' as const,
+      text: 'plan.pdf',
+      profileHash: 'FILE_HASH',
+      localClipboardHash: 'FILE_HASH',
+      fileUri: 'file:///history/plan.pdf',
+      fileName: 'plan.pdf',
+      fileSize: 2048,
+      hasData: true,
+      timestamp: 123,
+    };
+
+    await expect(copyToLocalClipboard(file)).resolves.toEqual({
+      success: true,
+      message: expect.any(String),
+    });
+    expect(clipboardManager.setFileContent).toHaveBeenCalledWith(
+      file.fileUri,
+      file.localClipboardHash
+    );
+    expect(setLastContent).toHaveBeenCalledWith(file);
   });
 });

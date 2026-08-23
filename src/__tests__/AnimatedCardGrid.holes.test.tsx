@@ -1,7 +1,6 @@
 /**
  * 空槽位诊断回路(fuzz):随机的列表变更(插入/删除/置顶/重复 hash)与滚动
- * 交错执行,允许弹簧动画处于"未落地"状态时继续变更(覆盖动画取消路径),
- * 最终落定所有动画后断言:
+ * 交错执行,并在每批变更后断言:
  *   1. 可视区域内的每个下标槽位,恰好有一张卡片停在该槽位坐标上(无空洞);
  *   2. 任意两张已挂载卡片不会停在同一坐标(无堆叠);
  *   3. 槽位上的卡片内容与 items[i] 的业务 hash 一致(无错位)。
@@ -10,60 +9,24 @@ import React from 'react';
 import TestRenderer, { act, ReactTestRenderer, ReactTestInstance } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 
-// ---- 可控的 reanimated mock:withSpring 挂起,由测试显式落定/取消 ----
-type SpringBox = { _current: number; value: number };
-interface PendingSpring {
-  box: SpringBox;
-  to: number;
-  cb?: (finished: boolean) => void;
-}
 // mock 前缀:jest.mock 工厂只允许引用 mock 前缀的外部变量
 const mockAnim: {
-  pendingSprings: PendingSpring[];
-  // 模拟 Reanimated 样式桥接失效:置 true 后,新挂载组件的 useAnimatedStyle
-  // 只保留挂载瞬间的快照,之后共享值更新不再反映到视图上(JS 侧回调照常触发)。
-  // 对应真机上"快速挂载/卸载后动画样式不再生效"的故障模式。
-  mapperDeadForNewMounts: boolean;
   // 记录组件通过 ref 发起的 scrollTo 调用(scrollToOffset 的 inset 换算断言用)
   scrollToCalls: Array<{ y: number; animated?: boolean }>;
-} = { pendingSprings: [], mapperDeadForNewMounts: false, scrollToCalls: [] };
-
-function settleAllSprings() {
-  while (mockAnim.pendingSprings.length > 0) {
-    const s = mockAnim.pendingSprings.shift()!;
-    s.box._current = s.to;
-    s.cb?.(true);
-  }
-}
+} = { scrollToCalls: [] };
 
 jest.mock('react-native-reanimated', () => {
   const ReactActual = require('react');
-
-  const makeSharedValue = (init: number) => {
-    const box: any = { _current: init };
-    Object.defineProperty(box, 'value', {
-      get() {
-        return box._current;
-      },
-      set(v: any) {
-        const idx = mockAnim.pendingSprings.findIndex((s) => s.box === box);
-        if (idx >= 0) {
-          const [cancelled] = mockAnim.pendingSprings.splice(idx, 1);
-          cancelled.cb?.(false);
-        }
-        if (v && typeof v === 'object' && v.__spring) {
-          mockAnim.pendingSprings.push({ box, to: v.to, cb: v.cb });
-        } else {
-          box._current = v;
-        }
-      },
-    });
-    box.get = () => box.value;
-    box.set = (value: unknown) => {
-      box.value = value;
-    };
-    return box;
+  const layoutTransition = {
+    springify: jest.fn(),
+    damping: jest.fn(),
+    stiffness: jest.fn(),
+    mass: jest.fn(),
   };
+  layoutTransition.springify.mockReturnValue(layoutTransition);
+  layoutTransition.damping.mockReturnValue(layoutTransition);
+  layoutTransition.stiffness.mockReturnValue(layoutTransition);
+  layoutTransition.mass.mockReturnValue(layoutTransition);
 
   const AnimatedView = ReactActual.forwardRef((props: any, ref: any) =>
     ReactActual.createElement('AnimatedView', { ...props, ref })
@@ -80,34 +43,30 @@ jest.mock('react-native-reanimated', () => {
   return {
     __esModule: true,
     default: { View: AnimatedView, ScrollView: AnimatedScrollView },
-    useSharedValue: (init: number) => {
-      const ref = ReactActual.useRef(null);
-      if (!ref.current) ref.current = makeSharedValue(init);
-      return ref.current;
-    },
-    useAnimatedStyle: (fn: () => any) => {
-      const frozenRef = ReactActual.useRef(null);
-      if (frozenRef.current === null) {
-        frozenRef.current = mockAnim.mapperDeadForNewMounts
-          ? { dead: true, snapshot: { transform: fn().transform } }
-          : { dead: false };
+    useSharedValue: (initialValue: unknown) => {
+      const ref = ReactActual.useRef<any>(null);
+      if (!ref.current) {
+        let value = initialValue;
+        ref.current = {
+          get value() {
+            return value;
+          },
+          set value(next: unknown) {
+            value = next;
+          },
+          get: () => value,
+          set: (next: unknown) => {
+            value = typeof next === 'function' ? next(value) : next;
+          },
+        };
       }
-      if (frozenRef.current.dead) return frozenRef.current.snapshot;
-      return {
-        get transform() {
-          return fn().transform;
-        },
-      };
+      return ref.current;
     },
     // 组件用对象形式 { onScroll, onEndDrag, onMomentumEnd };测试只驱动 onScroll
     useAnimatedScrollHandler: (
       handlers: ((event: any) => void) | { onScroll?: (event: any) => void }
     ) => (typeof handlers === 'function' ? handlers : (event: any) => handlers.onScroll?.(event)),
-    withSpring: (to: number, _config: any, cb?: (finished: boolean) => void) => ({
-      __spring: true,
-      to,
-      cb,
-    }),
+    LinearTransition: layoutTransition,
   };
 });
 
@@ -116,6 +75,7 @@ jest.mock('react-native-worklets', () => ({
 }));
 
 import { AnimatedCardGrid, type AnimatedCardGridHandle } from '@/components/AnimatedCardGrid';
+import { LinearTransition } from 'react-native-reanimated';
 
 // ---- 布局参数(与断言共用) ----
 const NUM_COLUMNS = 2;
@@ -179,13 +139,9 @@ function readMountedCells(root: ReactTestInstance): MountedCell[] {
   return root
     .findAll((n) => n.type === ('AnimatedView' as any))
     .map((view) => {
-      const styles = view.props.style as any[];
-      const base = styles[0];
-      const live = styles[styles.length - 1];
-      const t = live.transform as { translateX?: number; translateY?: number }[];
-      // 视觉位置 = 静态 left/top + 动画 transform 增量
-      const x = (base.left ?? 0) + t.find((e) => 'translateX' in e)!.translateX!;
-      const y = (base.top ?? 0) + t.find((e) => 'translateY' in e)!.translateY!;
+      const style = StyleSheet.flatten(view.props.style);
+      const x = style.left ?? 0;
+      const y = style.top ?? 0;
       const marker = view.findAll((n) => n.type === ('cell' as any))[0];
       return { x, y, hash: marker.props.cellHash, id: marker.props.cellId };
     });
@@ -234,11 +190,6 @@ function makeRng(seed: number) {
 }
 
 describe('AnimatedCardGrid 空槽位模糊回路', () => {
-  afterEach(() => {
-    mockAnim.pendingSprings.length = 0;
-    mockAnim.mapperDeadForNewMounts = false;
-  });
-
   function setup(initialCount: number) {
     let nextId = 1;
     const makeItem = (): Item => {
@@ -272,13 +223,22 @@ describe('AnimatedCardGrid 空槽位模糊回路', () => {
           scrollView().props.onScroll({ contentOffset: { y } });
         });
       },
-      settle: () => {
-        act(() => {
-          settleAllSprings();
-        });
-      },
     };
   }
+
+  it('uses the Reanimated layout transition for every mounted card', () => {
+    const world = setup(4);
+    const cells = world.renderer.root.findAll((node) => node.type === ('AnimatedView' as any));
+
+    expect(cells).toHaveLength(4);
+    cells.forEach((cell) => {
+      expect(cell.props.layout).toBe(LinearTransition);
+    });
+    expect(LinearTransition.springify).toHaveBeenCalledTimes(1);
+    expect(LinearTransition.damping).toHaveBeenCalledWith(20);
+    expect(LinearTransition.stiffness).toHaveBeenCalledWith(200);
+    expect(LinearTransition.mass).toHaveBeenCalledWith(0.8);
+  });
 
   it('每批内容滚到末尾附近时只请求一次下一批', () => {
     const onEndReached = jest.fn();
@@ -359,32 +319,22 @@ describe('AnimatedCardGrid 空槽位模糊回路', () => {
           scrollTop = Math.max(0, Math.floor(rng() * Math.max(1, contentHeight - VIEWPORT)));
           world.scrollTo(scrollTop);
         }
-        // 一半概率在动画未落地时就叠加下一个变更,覆盖弹簧取消路径
-        if (rng() < 0.5) world.settle();
       }
-      world.settle();
       checkInvariants(world.renderer.root, world.getItems(), scrollTop, `iter=${iter}`);
     }
   });
 
-  it('样式桥接失效(动画更新丢失)时,静止卡片仍停在正确槽位', () => {
-    // 真机故障模式:卡片挂载后 Reanimated 的样式更新不再作用于视图。
-    // 期望:位置不应只活在动画 transform 里——静止时卡片必须停在正确槽位,
-    // 最坏只是丢一次动画,而不是永久滞留在别的坐标留下空槽位。
-    mockAnim.mapperDeadForNewMounts = true;
+  it('布局过渡不可用时,静止卡片仍停在正确槽位', () => {
     const world = setup(20);
     const items = world.getItems();
-    // 置顶一个中部条目,触发前面所有卡片重排飞行,随后落定
     world.setItems([items[7], ...items.filter((_, i) => i !== 7)]);
-    world.settle();
-    checkInvariants(world.renderer.root, world.getItems(), 0, 'dead-mapper');
+    checkInvariants(world.renderer.root, world.getItems(), 0, 'transition-unavailable');
   });
 
   it('删除可视区中部条目并落定后,不留空槽位', () => {
     const world = setup(20);
     const items = world.getItems();
     world.setItems(items.filter((_, i) => i !== 5));
-    world.settle();
     checkInvariants(world.renderer.root, world.getItems(), 0, 'delete-middle');
   });
 
@@ -425,10 +375,6 @@ describe('AnimatedCardGrid 空槽位模糊回路', () => {
     act(() => {
       renderer.update(render());
     });
-    act(() => {
-      settleAllSprings();
-    });
-
     expect(commits).toEqual(['update']);
   });
 

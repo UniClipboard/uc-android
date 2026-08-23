@@ -17,6 +17,7 @@ interface AppGroupStoreNativeModule {
   clearLegacyLanConfiguration(): Promise<void>;
   getKeyboardStatus(): Promise<NativeKeyboardStatus>;
   getPasteboardChangeCount(): number;
+  setPasteboardImageFromFile(fileUri: string): Promise<void>;
   claimOutboundShareJobs(): Promise<OutboundShareJobDTO[]>;
   completeOutboundShareJob(id: string): Promise<void>;
   releaseOutboundShareJob(id: string): Promise<void>;
@@ -201,6 +202,13 @@ export async function getLegacyLanConfiguration(): Promise<LegacyLanConfiguratio
  */
 export function getPasteboardChangeCount(): number | null {
   return NativeModule?.getPasteboardChangeCount() ?? null;
+}
+
+export function setPasteboardImageFromFile(fileUri: string): Promise<void> {
+  if (typeof NativeModule?.setPasteboardImageFromFile !== 'function') {
+    return Promise.reject(new Error('Native image clipboard writing is unavailable'));
+  }
+  return NativeModule.setPasteboardImageFromFile(fileUri);
 }
 
 export function getContainerUrl(): Promise<string | null> {

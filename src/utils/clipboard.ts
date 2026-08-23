@@ -133,10 +133,12 @@ export async function copyClipboardItem(
     text?: string;
     fileUri?: string;
     profileHash?: string;
+    localClipboardHash?: string;
   },
   clipboardManager: {
     setClipboardContent: (content: ClipboardContent) => Promise<void>;
-    setImageContent: (uri: string) => Promise<void>;
+    setImageContent: (uri: string, knownHash?: string) => Promise<void>;
+    setFileContent: (uri: string, knownHash?: string) => Promise<void>;
   }
 ): Promise<CopyResult> {
   try {
@@ -150,8 +152,13 @@ export async function copyClipboardItem(
     }
 
     if (item.type === 'Image' && item.fileUri) {
-      await clipboardManager.setImageContent(item.fileUri);
+      await clipboardManager.setImageContent(item.fileUri, item.localClipboardHash);
       return { success: true, message: i18n.t('errors:copy.copiedImage') };
+    }
+
+    if (item.type === 'File' && item.fileUri) {
+      await clipboardManager.setFileContent(item.fileUri, item.localClipboardHash);
+      return { success: true, message: i18n.t('errors:copy.copied') };
     }
 
     return { success: false, message: i18n.t('errors:copy.unsupportedType') };
@@ -213,14 +220,9 @@ export async function copyToLocalClipboard(content: ClipboardContent): Promise<C
 
     const result = await copyClipboardItem(contentToCopy, clipboardManager);
     if (result.success) {
-      let watermark = contentToCopy;
-      if (contentToCopy.type === 'Image') {
-        const observed = await clipboardManager.getClipboardContent().catch(() => null);
-        if (observed?.type === 'Image' && observed.localClipboardHash) {
-          watermark = { ...contentToCopy, localClipboardHash: observed.localClipboardHash };
-        }
-      }
-      await clipboardMonitor.setLastContent(watermark);
+      void clipboardMonitor
+        .setLastContent(contentToCopy)
+        .catch((error) => log.error('Failed to persist local clipboard watermark:', error));
     }
     return result;
   } catch (error) {

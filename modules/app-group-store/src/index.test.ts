@@ -100,6 +100,7 @@ describe('app-group-store JS wrapper', () => {
       getPayloadStats: jest.fn().mockResolvedValue({ count: 1, totalSize: 42 }),
       importPayloadFile: jest.fn().mockResolvedValue('file:///group/payloads/File-HASH'),
       migrateLegacyContainer: jest.fn().mockResolvedValue({ migrated: true, keys: 2 }),
+      setPasteboardImageFromFile: jest.fn().mockResolvedValue(undefined),
     };
     jest.doMock('expo-modules-core', () => ({
       requireOptionalNativeModule: jest.fn(() => mockNativeModule),
@@ -111,6 +112,7 @@ describe('app-group-store JS wrapper', () => {
     await store.writePayload('Image-ABC', bytes);
     await store.deletePayload('Image-ABC');
     await store.clearPayloads();
+    await store.setPasteboardImageFromFile('file:///history/photo.png');
 
     expect(mockNativeModule.writePayload).toHaveBeenCalledWith('Image-ABC', bytes);
     await expect(store.getContainerUrl()).resolves.toBe('file:///group');
@@ -121,6 +123,9 @@ describe('app-group-store JS wrapper', () => {
       'File-HASH'
     );
     await expect(store.migrateLegacyContainer()).resolves.toEqual({ migrated: true, keys: 2 });
+    expect(mockNativeModule.setPasteboardImageFromFile).toHaveBeenCalledWith(
+      'file:///history/photo.png'
+    );
   });
 
   it('falls back safely when the native module is unavailable', async () => {
@@ -140,6 +145,9 @@ describe('app-group-store JS wrapper', () => {
     await expect(store.getPayloadStats()).resolves.toEqual({ count: 0, totalSize: 0 });
     await expect(store.claimOutboundShareJobs()).resolves.toEqual([]);
     await expect(store.migrateLegacyContainer()).resolves.toEqual({ migrated: false, keys: 0 });
+    await expect(store.setPasteboardImageFromFile('file:///missing.png')).rejects.toThrow(
+      'unavailable'
+    );
   });
 
   it('tolerates an older native module without LAN cleanup support', async () => {

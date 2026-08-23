@@ -22,6 +22,7 @@ describe('clipboardProxy iOS file reads', () => {
     const createDirectory = jest.fn();
 
     jest.doMock('react-native', () => ({ Platform: { OS: 'ios' } }));
+    const setUrlAsync = jest.fn().mockResolvedValue(undefined);
     jest.doMock('expo-clipboard', () => ({
       getUrlAsync: jest.fn().mockResolvedValue(clipboardUrl),
       getStringAsync: jest.fn(),
@@ -29,6 +30,7 @@ describe('clipboardProxy iOS file reads', () => {
       hasStringAsync: jest.fn(),
       hasImageAsync: jest.fn(),
       getImageAsync: jest.fn(),
+      setUrlAsync,
     }));
     jest.doMock('expo-file-system', () => ({
       Directory: jest.fn().mockImplementation(() => ({
@@ -56,6 +58,7 @@ describe('clipboardProxy iOS file reads', () => {
       copy,
       destination,
       createDirectory,
+      setUrlAsync,
     };
   };
 
@@ -86,5 +89,13 @@ describe('clipboardProxy iOS file reads', () => {
 
     await expect(proxy.getFileSourceIdAsync()).resolves.toBeNull();
     await expect(proxy.saveFileToFileAsync('file:///cache/temp_files')).resolves.toBeNull();
+  });
+
+  it('writes a local file URL to the iOS clipboard without reading the file', async () => {
+    const { proxy, setUrlAsync } = loadProxy(null);
+
+    await expect(proxy.setFileUrlAsync('file:///history/plan.pdf')).resolves.toBeUndefined();
+
+    expect(setUrlAsync).toHaveBeenCalledWith('file:///history/plan.pdf');
   });
 });

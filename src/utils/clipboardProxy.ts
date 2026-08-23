@@ -15,6 +15,7 @@ import {
 import { createLogger } from '@/support/observability';
 import { getBackgroundClipboardAdapter } from '@/utils/androidBackgroundClipboardAccess';
 import { sanitizeDataName } from '@/utils/fileName';
+import { setPasteboardImageFromFile } from 'app-group-store';
 
 const log = createLogger('ClipboardProxy');
 
@@ -188,4 +189,18 @@ export async function getFileSourceIdAsync(): Promise<string | null> {
  */
 export async function setImageAsync(base64Image: string): Promise<void> {
   return Clipboard.setImageAsync(base64Image);
+}
+
+export async function setImageFromFileAsync(fileUri: string): Promise<void> {
+  if (Platform.OS !== 'ios') {
+    throw new Error('Native image file clipboard writing is only available on iOS');
+  }
+  await setPasteboardImageFromFile(fileUri);
+}
+
+export async function setFileUrlAsync(fileUri: string): Promise<void> {
+  if (Platform.OS !== 'ios') {
+    throw new Error('File URL clipboard writing is only available on iOS');
+  }
+  await Clipboard.setUrlAsync(fileUri);
 }

@@ -472,15 +472,10 @@ export class ClipboardManager {
   /**
    * 设置图片到剪贴板
    */
-  async setImageContent(imageUri: string): Promise<void> {
+  async setImageContent(imageUri: string, knownHash?: string): Promise<void> {
     try {
       if (Platform.OS === 'ios') {
-        // android-util 未提供 iOS 实现，改走 expo-clipboard（UIPasteboard）
-        const { readAsStringAsync, EncodingType } = await import('expo-file-system/legacy');
-        const base64 = await readAsStringAsync(imageUri, {
-          encoding: EncodingType.Base64,
-        });
-        await Clipboard.setImageAsync(base64);
+        await ClipboardProxy.setImageFromFileAsync(imageUri);
       } else {
         // Android：直接通过 native 将文件设置到系统剪贴板（不经过 JS 内存/base64）
         const success = await nativeSetClipboardImageFromFile(imageUri);
@@ -490,11 +485,21 @@ export class ClipboardManager {
       }
 
       // 计算并更新 localClipboardHash（用于本地变化检测，与 getImageContent 保持一致使用文件内容 hash）
-      const localClipboardHash = await calculateFileHash(imageUri);
+      const localClipboardHash = knownHash || (await calculateFileHash(imageUri));
       this.lastProfileHash = localClipboardHash;
     } catch (error) {
       log.error('Failed to set image content:', error);
       throw new Error('Failed to set image to clipboard');
+    }
+  }
+
+  async setFileContent(fileUri: string, knownHash?: string): Promise<void> {
+    try {
+      await ClipboardProxy.setFileUrlAsync(fileUri);
+      if (knownHash) this.lastProfileHash = knownHash;
+    } catch (error) {
+      log.error('Failed to set file content:', error);
+      throw new Error('Failed to set file to clipboard');
     }
   }
 
@@ -511,14 +516,17 @@ export class ClipboardManager {
 
       case 'Image':
         if (content.fileUri) {
-          await this.setImageContent(content.fileUri);
+          await this.setImageContent(content.fileUri, content.localClipboardHash);
         }
         break;
 
       case 'File':
+        if (content.fileUri) {
+          await this.setFileContent(content.fileUri, content.localClipboardHash);
+        }
+        break;
+
       case 'Group':
-        // 文件和文件组暂不支持直接设置到剪贴板
-        // 可以设置文件路径或名称作为文本
         if (!isTextInvalid(content.text)) {
           await this.setTextContent(content.text);
         }

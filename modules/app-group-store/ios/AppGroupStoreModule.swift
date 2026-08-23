@@ -1,6 +1,7 @@
 import ExpoModulesCore
 import Foundation
 import UIKit
+import UniformTypeIdentifiers
 
 public class AppGroupStoreModule: Module {
   private let store = SettingsStore()
@@ -28,6 +29,19 @@ public class AppGroupStoreModule: Module {
     // permission prompt, unlike reading the pasteboard's actual contents.
     Function("getPasteboardChangeCount") { () -> Int in
       UIPasteboard.general.changeCount
+    }
+
+    AsyncFunction("setPasteboardImageFromFile") { (fileUri: String) async throws -> Void in
+      let url = try AppGroupStoreModule.fileURL(fileUri)
+      let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+      guard !data.isEmpty else {
+        throw AppGroupStoreError.emptyPasteboardImage
+      }
+      let pasteboardType = UTType(filenameExtension: url.pathExtension)?.identifier
+        ?? UTType.png.identifier
+      await MainActor.run {
+        UIPasteboard.general.setData(data, forPasteboardType: pasteboardType)
+      }
     }
 
     AsyncFunction("getContainerUrl") { () -> String? in
@@ -141,6 +155,16 @@ public class AppGroupStoreModule: Module {
     }
   }
 
+  private static func fileURL(_ raw: String) throws -> URL {
+    if let url = URL(string: raw), url.isFileURL {
+      return url
+    }
+    guard raw.hasPrefix("/") else {
+      throw AppGroupStoreError.invalidFileURL
+    }
+    return URL(fileURLWithPath: raw)
+  }
+
   private func payloadStats() -> [String: Int] {
     let directory = AppGroupStoreModule.payloadDirectory()
     let urls = (try? FileManager.default.contentsOfDirectory(
@@ -243,5 +267,19 @@ public class AppGroupStoreModule: Module {
       && !key.contains("\\")
       && key != "."
       && key != ".."
+  }
+}
+
+private enum AppGroupStoreError: LocalizedError {
+  case invalidFileURL
+  case emptyPasteboardImage
+
+  var errorDescription: String? {
+    switch self {
+    case .invalidFileURL:
+      return "The image path is not a local file URL"
+    case .emptyPasteboardImage:
+      return "The image file is empty"
+    }
   }
 }

@@ -60,6 +60,15 @@ describe('install-dev-device.sh', () => {
     expect(script).toContain('local dist_dir="$LOCAL_ENGINE_BUILD_ROOT/uc-engine-uniffi-dist/ios"');
   });
 
+  it('restores the pinned iOS Engine after a physical-device install exits', () => {
+    const script = readFileSync(scriptPath, 'utf8');
+
+    expect(script).toContain('restore_pinned_ios_engine()');
+    expect(script).toContain('trap restore_pinned_ios_engine EXIT');
+    expect(script).toContain('UniClipboardEngine.xcframework.zip');
+    expect(script).toContain('verify-unified-engine-core.mjs" --prepared');
+  });
+
   it('prepares only the Engine artifacts required by the requested platform', () => {
     const script = readFileSync(scriptPath, 'utf8');
 

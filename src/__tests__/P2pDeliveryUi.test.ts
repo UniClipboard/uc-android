@@ -16,6 +16,28 @@ describe('P2P delivery UI wiring', () => {
     expect(controller).toContain('getUnifiedSpaceService().resendEntry');
   });
 
+  it('shows local copy feedback before starting sync and history follow-up work', () => {
+    const controller = source('src/screens/useHomeController.ts');
+    const cardPress = controller.match(
+      /const handleItemPress = useCallback\([\s\S]*?\n  \);\n\n  \/\/ ── Long-press/
+    )?.[0];
+    const menuCopy = controller.match(/onCopy: async \(\) => \{[\s\S]*?\n        \},/)?.[0];
+    const followUp = controller.match(
+      /const startPostCopyFlow = useCallback\([\s\S]*?\n  \);/
+    )?.[0];
+
+    expect(cardPress).toBeDefined();
+    expect(menuCopy).toBeDefined();
+    expect(followUp).toBeDefined();
+    expect(cardPress!.indexOf('showMessage(')).toBeLessThan(
+      cardPress!.indexOf('startPostCopyFlow(')
+    );
+    expect(menuCopy!.indexOf('showMessage(')).toBeLessThan(menuCopy!.indexOf('startPostCopyFlow('));
+    expect(followUp).toContain('void notifyDeviceClipboardChanged(content)');
+    expect(followUp).toMatch(/void historyStorage\s*\.updateLastAccessed\(item\.profileHash\)/);
+    expect(followUp).not.toContain('await ');
+  });
+
   it.each(['android', 'ios'])(
     'hides delivery and sync status from %s cards while retaining stored delivery data',
     (platform) => {

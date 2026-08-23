@@ -61,6 +61,32 @@ assert_development_project() {
   fi
 }
 
+restore_pinned_ios_engine() {
+  local module_dir="$PROJECT_ROOT/modules/uc-engine"
+  local pinned_version
+  local cache_dir
+  local archive
+  local binding
+  local module_framework="$module_dir/ios/UniClipboardEngine.xcframework"
+
+  pinned_version="$(node -p "require('$module_dir/core-source.json').version")"
+  cache_dir="$module_dir/.artifacts/$pinned_version"
+  archive="$cache_dir/UniClipboardEngine.xcframework.zip"
+  binding="$cache_dir/uc_engine_uniffi.swift"
+  if [ ! -f "$archive" ] || [ ! -f "$binding" ]; then
+    echo "The pinned iOS Engine cache is incomplete: $cache_dir" >&2
+    return 1
+  fi
+
+  if [ -d "$module_framework" ]; then
+    find "$module_framework" -depth -delete
+  fi
+  unzip -q "$archive" -d "$module_dir/ios"
+  find "$module_framework" -name '._*' -delete
+  cp "$binding" "$module_dir/ios/Bindings/uc_engine_uniffi.swift"
+  node "$SCRIPT_DIR/verify-unified-engine-core.mjs" --prepared
+}
+
 restore_cached_local_ios_engine() {
   local dist_dir="$LOCAL_ENGINE_BUILD_ROOT/uc-engine-uniffi-dist/ios"
   local module_dir="$PROJECT_ROOT/modules/uc-engine/ios"
@@ -151,6 +177,7 @@ prepare_latest_engine() {
 install_ios() {
   local device="$1"
   require_command xcrun
+  require_command unzip
 
   if ! xcrun devicectl list devices 2>/dev/null | grep -Fq -- "$device"; then
     echo "iOS device is not available: $device" >&2
@@ -159,8 +186,11 @@ install_ios() {
   fi
 
   assert_development_project ios
+  trap restore_pinned_ios_engine EXIT
   prepare_latest_engine ios
   UC_ENGINE_LOCAL_CORE=1 APP_VARIANT=development npx expo run:ios --device "$device" --no-bundler
+  restore_pinned_ios_engine
+  trap - EXIT
 }
 
 install_android() {
