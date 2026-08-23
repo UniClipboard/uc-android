@@ -101,11 +101,11 @@ describe('LAN server UI ownership', () => {
     );
   });
 
-  it('opens LAN server settings from both platform settings roots', () => {
-    const iosRoot = source('src/screens/settings/ios/SettingsRootPage.tsx');
-    const androidRoot = source('src/screens/SettingsScreen.android.tsx');
+  it('opens LAN server settings from the selected sync method pages', () => {
+    const iosPage = source('src/screens/settings/ios/SyncChannelPage.tsx');
+    const androidPage = source('src/screens/settings/SyncChannelSection.android.tsx');
 
-    expect(iosRoot).toContain("onNavigate('lanServers')");
-    expect(androidRoot).toContain('section="lanServers"');
+    expect(iosPage).toContain("onNavigate('lanServers')");
+    expect(androidPage).toContain("openSection('lanServers')");
   });
 });

@@ -25,6 +25,7 @@ import { DebugSection } from './android/DebugSection';
 import { QuickActionsSection } from './QuickActionsSection';
 import { ClipboardAccessMethodSheetProvider } from './ClipboardAccessMethodSheet';
 import { LanServersPage } from './LanServersPage';
+import { SyncChannelSection } from './SyncChannelSection.android';
 
 const SettingsSubScreenInner = memo(function SettingsSubScreenInner() {
   const { theme } = useTheme();
@@ -46,6 +47,8 @@ const SettingsSubScreenInner = memo(function SettingsSubScreenInner() {
           contentPadding={{ start: 16, end: 16, top: 16, bottom: 40 }}
           verticalArrangement={{ spacedBy: 16 }}
         >
+          {section === 'syncChannel' && <SyncChannelSection />}
+
           {section === 'space' && (
             <UnifiedSpaceSetup
               initialDeviceId={route.params.deviceId}

@@ -18,6 +18,16 @@
     "sectionTitle": "通用",
     "theme": "主题"
   },
+  "syncChannel": {
+    "title": "同步方式",
+    "lan": "常规同步",
+    "p2p": "设备直连",
+    "default": "默认",
+    "experimental": "实验功能",
+    "currentConnection": "当前连接",
+    "connectionSettings": "连接设置",
+    "notConfigured": "未配置"
+  },
   "category": {
     "sync": "同步",
     "about": "关于",

@@ -10,6 +10,9 @@ export function migrateStoredSettings(raw: unknown, sourceSchemaVersion: number)
     if (old[key] !== undefined) result[key] = old[key];
   }
 
+  result.syncChannel =
+    old.syncChannel === 'p2p' || old.syncChannel === 'lan' ? old.syncChannel : 'lan';
+
   const upgradedFromLan =
     sourceSchemaVersion < SETTINGS_SCHEMA_VERSION &&
     (old.syncChannel === 'lan' ||

@@ -295,8 +295,8 @@
     "danger": { "title": "Danger zone" }
   },
   "lan": {
-    "title": "Local network servers",
-    "summary": "Manage HTTP / HTTPS sync servers",
+    "title": "Connection settings",
+    "summary": "Manage sync connections",
     "configuredCount_one": "{{count}} server",
     "configuredCount_other": "{{count}} servers",
     "active": "Current",
@@ -334,7 +334,7 @@
     "makeActive": "Make current server",
     "deleteTitle": "Delete server",
     "deleteMessage": "The server details and saved password will be removed from this device.",
-    "notAvailableYet": "Server details are saved locally. LAN sync will be connected in the next stage.",
+    "notAvailableYet": "Connection details stay on this device and passwords use secure system storage.",
     "qr": {
       "title": "Scan server QR code",
       "hint": "Place the QR code inside the frame",

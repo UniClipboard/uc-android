@@ -3,7 +3,12 @@ import * as Application from 'expo-application';
 import { isTestBuildVersion } from '@/features/updates';
 import type { LanServerProfile } from './lan';
 
+export type SyncChannel = 'lan' | 'p2p';
+
 export interface SharedSettings {
+  /** User-selected transport. LAN and P2P never run as automatic fallbacks for each other. */
+  syncChannel: SyncChannel;
+
   // Sync behavior
   autoApplyRemote: boolean;
   autoPushLocal: boolean;
@@ -79,6 +84,7 @@ export interface RuntimeState {
 }
 
 export const SHARED_DEFAULTS: SharedSettings = {
+  syncChannel: 'lan',
   autoApplyRemote: true,
   autoPushLocal: true,
   customRelayUrls: [],
@@ -155,4 +161,4 @@ export const RUNTIME_STATE_DEFAULTS: RuntimeState = {
   needsHistoryReorganize: false,
 };
 
-export const SETTINGS_SCHEMA_VERSION = 10;
+export const SETTINGS_SCHEMA_VERSION = 11;

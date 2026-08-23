@@ -2,6 +2,11 @@ import { describe, expect, it } from '@jest/globals';
 import { createDefaultSettings } from '../types/settings';
 
 describe('platform settings defaults', () => {
+  it('selects LAN by default on every platform', () => {
+    expect(createDefaultSettings('ios').syncChannel).toBe('lan');
+    expect(createDefaultSettings('android').syncChannel).toBe('lan');
+  });
+
   it('enables automatic pull and push on iOS', () => {
     const settings = createDefaultSettings('ios');
 

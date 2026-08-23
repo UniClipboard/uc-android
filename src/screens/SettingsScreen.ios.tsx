@@ -32,6 +32,7 @@ import { SpacePage } from './settings/ios/SpacePage';
 import { DeveloperPage } from './settings/ios/DeveloperPage';
 import { LanServersPage } from './settings/ios/LanServersPage';
 import { LanServerEditorSheet } from './settings/ios/LanServerEditorSheet';
+import { SyncChannelPage } from './settings/ios/SyncChannelPage';
 import { usePendingLanConnectStore, type LanConnectIntent } from '@/features/lan-servers';
 import {
   canOpenDeviceTrustPreview,
@@ -95,7 +96,8 @@ export const SettingsScreen = () => {
   const { config, isLoaded, loadConfig } = useSettingsStore();
 
   const [presented, setPresented] = useState(true);
-  const [activePage, setActivePage] = useState<SettingsSubPage | null>(null);
+  const [pageStack, setPageStack] = useState<SettingsSubPage[]>([]);
+  const activePage = pageStack[pageStack.length - 1] ?? null;
   const [isLeavingPage, setIsLeavingPage] = useState(false);
   const [showSpaceInvitation, setShowSpaceInvitation] = useState(false);
   const [spaceSetupMode, setSpaceSetupMode] = useState<AddSyncConnectionMode | null>(null);
@@ -118,13 +120,13 @@ export const SettingsScreen = () => {
     )
       return;
     notificationRouteHandled.current = requestId;
-    setActivePage('space');
+    setPageStack(['space']);
     setIsLeavingPage(false);
   }, [route.params?.notificationNavigationRequestId, route.params?.section]);
 
   useEffect(() => {
     if (route.params?.section !== 'lanServers') return;
-    setActivePage('lanServers');
+    setPageStack(['lanServers']);
     setIsLeavingPage(false);
   }, [route.params?.section]);
 
@@ -132,7 +134,7 @@ export const SettingsScreen = () => {
     if (!pendingLanIntent) return;
     const intent = consumePendingLanIntent();
     if (!intent) return;
-    setActivePage('lanServers');
+    setPageStack(['lanServers']);
     setIsLeavingPage(false);
     setLanServerIntent(intent);
     setEditingLanServerId('new');
@@ -152,7 +154,7 @@ export const SettingsScreen = () => {
 
   const openSubPage = useCallback((page: SettingsPage) => {
     if (page === 'root') return;
-    setActivePage(page);
+    setPageStack((current) => [...current, page]);
     setIsLeavingPage(false);
   }, []);
 
@@ -165,7 +167,20 @@ export const SettingsScreen = () => {
     setIsLeavingPage(true);
   }, [deviceManagement.closeDevice]);
 
-  const removeSubPage = useCallback(() => setActivePage(null), []);
+  const backToPreviousPage = useCallback(() => {
+    deviceManagement.closeDevice();
+    setShowSpaceInvitation(false);
+    setSpaceSetupMode(null);
+    setEditingLanServerId(null);
+    setLanServerIntent(null);
+    if (pageStack.length > 1) {
+      setPageStack((current) => current.slice(0, -1));
+      return;
+    }
+    setIsLeavingPage(true);
+  }, [deviceManagement.closeDevice, pageStack.length]);
+
+  const removeSubPage = useCallback(() => setPageStack([]), []);
 
   const openPreview = useCallback((scenarioId: DeviceTrustPreviewScenarioId) => {
     if (!canOpenDeviceTrustPreview()) return false;
@@ -189,13 +204,16 @@ export const SettingsScreen = () => {
               <SettingsRootPage onNavigate={openSubPage} />
               {activePage ? (
                 <SettingsSubPageOverlay isLeaving={isLeavingPage} onExited={removeSubPage}>
+                  {activePage === 'syncChannel' ? (
+                    <SyncChannelPage onBack={backToRoot} onNavigate={openSubPage} />
+                  ) : null}
                   {activePage === 'space' ? (
                     <SpacePage
                       initialDeviceId={route.params?.deviceId}
                       notificationNavigationRequestId={
                         route.params?.notificationNavigationRequestId
                       }
-                      onBack={backToRoot}
+                      onBack={backToPreviousPage}
                       onOpenInvitation={() => setShowSpaceInvitation(true)}
                       onOpenSetup={setSpaceSetupMode}
                       deviceManagement={deviceManagement}
@@ -204,7 +222,7 @@ export const SettingsScreen = () => {
                   {activePage === 'storage' ? <StoragePage onBack={backToRoot} /> : null}
                   {activePage === 'lanServers' ? (
                     <LanServersPage
-                      onBack={backToRoot}
+                      onBack={backToPreviousPage}
                       onAdd={() => {
                         setLanServerIntent(null);
                         setEditingLanServerId('new');

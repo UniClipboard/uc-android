@@ -59,23 +59,26 @@ describe('unified space setup UI', () => {
     expect(connectionSheet).not.toContain('iosSaturatedButtonPalette(JOIN_TINT)');
   });
 
-  it('keeps space setup directly available on both platforms', () => {
+  it('keeps space setup available from the selected sync method on both platforms', () => {
     const androidHub = source('screens/SettingsScreen.android.tsx');
     const androidSubScreen = source('screens/settings/SettingsSubScreen.android.tsx');
+    const androidSyncMethod = source('screens/settings/SyncChannelSection.android.tsx');
     const navigation = source('navigation/AppNavigator.tsx');
     const navigationTypes = source('navigation/AppNavigator.types.ts');
     const iosRoot = source('screens/settings/ios/SettingsRootPage.tsx');
+    const iosSyncMethod = source('screens/settings/ios/SyncChannelPage.tsx');
     const iosScreen = source('screens/SettingsScreen.ios.tsx');
     const iosPages = source('screens/settings/ios/types.ts');
 
-    expect(androidHub).toContain('section="space"');
+    expect(androidHub).toContain('section="syncChannel"');
+    expect(androidSyncMethod).toContain("openSection('space')");
     expect(androidSubScreen).toContain("section === 'space' && (");
     expect(androidSubScreen).toContain('<UnifiedSpaceSetup');
     expect(androidSubScreen).toContain('initialDeviceId={route.params.deviceId}');
     expect(navigationTypes).toContain("| 'space'");
     expect(navigation).toContain("space: t('space.title', { ns: 'settingsSync' })");
-    expect(iosRoot).toContain("onNavigate('space')");
-    expect(iosRoot).not.toContain('syncChannel');
+    expect(iosRoot).toContain("onNavigate('syncChannel')");
+    expect(iosSyncMethod).toContain("onNavigate('space')");
     expect(iosScreen).toContain("activePage === 'space'");
     expect(iosScreen).toContain('<SpacePage');
     expect(iosPages).toContain("| 'space'");

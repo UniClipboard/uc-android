@@ -18,6 +18,16 @@
     "sectionTitle": "General",
     "theme": "Theme"
   },
+  "syncChannel": {
+    "title": "Sync method",
+    "lan": "Standard sync",
+    "p2p": "Direct device sync",
+    "default": "Default",
+    "experimental": "Experimental",
+    "currentConnection": "Current connection",
+    "connectionSettings": "Connection settings",
+    "notConfigured": "Not configured"
+  },
   "category": {
     "sync": "Sync",
     "about": "About",

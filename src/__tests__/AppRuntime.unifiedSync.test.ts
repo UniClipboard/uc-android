@@ -28,13 +28,15 @@ let settingsState = {
   isLoaded: true,
   config: {
     enableForegroundNotification: false,
-    activeLanServerId: 'lan-1',
-    lanServers: [{ id: 'lan-1' }],
+    syncChannel: 'lan' as 'lan' | 'p2p',
+    activeLanServerId: null,
+    lanServers: [],
   },
   isTempDisabledBackgroundTasks: false,
   loadConfig: jest.fn(async () => undefined),
   setEnableBackgroundTasks: jest.fn(),
   setTempDisabledBackgroundTasks: jest.fn(),
+  updateConfig: jest.fn(async () => ({ ok: true as const })),
 };
 
 configureAppRuntime({
@@ -89,7 +91,12 @@ describe('AppRuntime unified sync ownership', () => {
     const previous = settingsState;
     settingsState = {
       ...settingsState,
-      config: { enableForegroundNotification: false, activeLanServerId: null, lanServers: [] },
+      config: {
+        enableForegroundNotification: false,
+        syncChannel: 'p2p',
+        activeLanServerId: 'lan-1',
+        lanServers: [{ id: 'lan-1' }],
+      },
     };
     settingsListener?.(settingsState, previous);
     await new Promise((resolve) => setTimeout(resolve, 0));

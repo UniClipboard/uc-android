@@ -34,6 +34,7 @@ import { AnalyticsConsentControl } from './settings/AnalyticsConsentControl';
 
 // XML 矢量图标(Material Icons 路径),由 @expo/ui Icon 在原生侧解析渲染。
 const ICONS: Record<SettingsSubSection | 'chevron', number> = {
+  syncChannel: require('../assets/icons/dns.xml'),
   space: require('../assets/icons/groups.xml'),
   lanServers: require('../assets/icons/dns.xml'),
   history: require('../assets/icons/history.xml'),
@@ -143,6 +144,9 @@ const ClipboardSyncDirectionGroup = memo(function ClipboardSyncDirectionGroup() 
 /** 「同步」组:P2P Space / 历史记录。 */
 const SyncHubGroup = memo(function SyncHubGroup({ iconTint, onNavigate }: HubGroupProps) {
   const { t } = useTranslation('settings');
+  const syncChannelSummary = useSettingsStore((state) =>
+    t(state.config?.syncChannel === 'p2p' ? 'syncChannel.p2p' : 'syncChannel.lan')
+  );
   const historySummary = useSettingsStore((s) =>
     t('hub.summary.history', { count: s.config?.maxHistoryItems ?? 1000 })
   );
@@ -150,17 +154,9 @@ const SyncHubGroup = memo(function SyncHubGroup({ iconTint, onNavigate }: HubGro
   return (
     <SettingsSectionItem title={t('category.sync')}>
       <HubRow
-        section="space"
-        label={t('space.title', { ns: 'settingsSync' })}
-        summary={t('connection.p2pDescription', { ns: 'settingsSync' })}
-        iconTint={iconTint}
-        onNavigate={onNavigate}
-      />
-      <HorizontalDivider />
-      <HubRow
-        section="lanServers"
-        label={t('lan.title', { ns: 'settingsSync' })}
-        summary={t('lan.summary', { ns: 'settingsSync' })}
+        section="syncChannel"
+        label={t('syncChannel.title')}
+        summary={syncChannelSummary}
         iconTint={iconTint}
         onNavigate={onNavigate}
       />

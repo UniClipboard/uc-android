@@ -35,7 +35,9 @@ import {
 import { configureProductionLanServerService } from '@/features/lan-servers/production';
 import { getLanServerService } from '@/features/lan-servers';
 import { LanSyncAdapter } from '@/features/lan-sync';
-import { applyLanRemoteText } from '@/features/lan-sync/production';
+import { applyLanRemoteContent } from '@/features/lan-sync/production';
+import { prepareTempFilePath } from '@/platform/files';
+import { sanitizeDataName } from '@/utils/fileName';
 
 let configured = false;
 
@@ -79,7 +81,9 @@ export function configureAppRuntime(): void {
           return getLanServerService().getDraft(config.activeLanServerId);
         },
         readClipboard: () => clipboardManager.getClipboardContent(),
-        applyRemoteText: applyLanRemoteText,
+        applyRemoteContent: applyLanRemoteContent,
+        preparePayloadTempUri: (profileHash, dataName) =>
+          prepareTempFilePath(`${profileHash}-${sanitizeDataName(dataName)}`),
       }),
     ],
     'p2p'

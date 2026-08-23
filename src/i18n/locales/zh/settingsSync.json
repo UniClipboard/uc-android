@@ -295,8 +295,8 @@
     "danger": { "title": "危险操作" }
   },
   "lan": {
-    "title": "局域网服务器",
-    "summary": "管理 HTTP / HTTPS 同步服务器",
+    "title": "连接设置",
+    "summary": "管理同步连接",
     "configuredCount_one": "{{count}} 台",
     "configuredCount_other": "{{count}} 台",
     "active": "当前",
@@ -334,7 +334,7 @@
     "makeActive": "设为当前服务器",
     "deleteTitle": "删除服务器",
     "deleteMessage": "服务器资料和保存的密码都会从本机删除。",
-    "notAvailableYet": "服务器资料会保存在本机；LAN 同步将在下一阶段接入。",
+    "notAvailableYet": "连接资料保存在本机，密码保存在系统安全区域。",
     "qr": {
       "title": "扫描服务器二维码",
       "hint": "将二维码放入框内",

@@ -90,24 +90,11 @@ export function SettingsRootPage({
           footer={<SwiftUIText>{t('ios.sync.footer')}</SwiftUIText>}
         >
           <SettingsNavRow
-            icon="person.2"
-            iconColor={settingsTileColors.indigo}
-            title={t('space.title', { ns: 'settingsSync' })}
-            onPress={() => onNavigate('space')}
-          />
-          <SettingsNavRow
-            icon="server.rack"
+            icon="network"
             iconColor={settingsTileColors.blue}
-            title={t('lan.title', { ns: 'settingsSync' })}
-            value={
-              config.lanServers.length > 0
-                ? t('lan.configuredCount', {
-                    ns: 'settingsSync',
-                    count: config.lanServers.length,
-                  })
-                : undefined
-            }
-            onPress={() => onNavigate('lanServers')}
+            title={t('syncChannel.title')}
+            value={t(config.syncChannel === 'p2p' ? 'syncChannel.p2p' : 'syncChannel.lan')}
+            onPress={() => onNavigate('syncChannel')}
           />
           <IconToggleRow
             icon="arrow.down.doc"

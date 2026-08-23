@@ -10,10 +10,10 @@ function projectFile(relativePath: string): string {
 }
 
 describe('legacy LAN removal', () => {
-  it('does not expose LAN fields on fresh installs', () => {
+  it('keeps removed legacy fields out while defaulting to standard sync', () => {
     const settings = createDefaultSettings('android') as unknown as Record<string, unknown>;
 
-    expect(settings).not.toHaveProperty('syncChannel');
+    expect(settings.syncChannel).toBe('lan');
     expect(settings).not.toHaveProperty('servers');
     expect(settings).not.toHaveProperty('activeServerIndex');
     expect(settings).not.toHaveProperty('legacyLanEligible');

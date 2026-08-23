@@ -213,7 +213,14 @@ export async function copyToLocalClipboard(content: ClipboardContent): Promise<C
 
     const result = await copyClipboardItem(contentToCopy, clipboardManager);
     if (result.success) {
-      await clipboardMonitor.setLastContent(contentToCopy);
+      let watermark = contentToCopy;
+      if (contentToCopy.type === 'Image') {
+        const observed = await clipboardManager.getClipboardContent().catch(() => null);
+        if (observed?.type === 'Image' && observed.localClipboardHash) {
+          watermark = { ...contentToCopy, localClipboardHash: observed.localClipboardHash };
+        }
+      }
+      await clipboardMonitor.setLastContent(watermark);
     }
     return result;
   } catch (error) {

@@ -22,4 +22,15 @@ describe('iOS settings page navigation', () => {
     expect(settingsScreen).toContain('<AddSyncConnectionSheet');
     expect(settingsScreen).toContain('persistentPresentation');
   });
+
+  it('returns nested connection pages to the sync method page', () => {
+    expect(settingsScreen).toContain(
+      'const [pageStack, setPageStack] = useState<SettingsSubPage[]>([])'
+    );
+    expect(settingsScreen).toContain('setPageStack((current) => [...current, page])');
+    expect(settingsScreen).toContain('const backToPreviousPage = useCallback');
+    expect(settingsScreen).toContain('setPageStack((current) => current.slice(0, -1))');
+    expect(settingsScreen).toContain('<SpacePage');
+    expect(settingsScreen).toContain('onBack={backToPreviousPage}');
+  });
 });

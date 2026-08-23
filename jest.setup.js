@@ -8,6 +8,12 @@ jest.mock('expo-crypto', () => ({
   },
 }));
 
+// Expo resolves `expo/fetch` to its TypeScript source through Metro. Jest runs in
+// Node, so use Node's standards-compatible streaming fetch at this native boundary.
+jest.mock('expo/fetch', () => ({
+  fetch: (...args) => globalThis.fetch(...args),
+}));
+
 jest.mock('expo-clipboard', () => ({
   getStringAsync: jest.fn(),
   setStringAsync: jest.fn(),
@@ -88,6 +94,7 @@ jest.mock('expo-file-system', () => {
   class MockFile {
     static moveMock = jest.fn();
     static existsMock = jest.fn(() => true);
+    static textMock = jest.fn().mockResolvedValue('');
 
     constructor(...parts) {
       this.parts = parts;
@@ -107,6 +114,7 @@ jest.mock('expo-file-system', () => {
       close: jest.fn(),
     });
     textSync = jest.fn().mockReturnValue('');
+    text = (...args) => MockFile.textMock(...args);
     write = jest.fn();
     delete = jest.fn();
     move = (...args) => MockFile.moveMock(...args);

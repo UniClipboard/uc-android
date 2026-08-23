@@ -21,7 +21,7 @@ describe('unified sync adoption', () => {
     const composition = source('src/app/runtime/composition.ts');
 
     expect(composition).toContain('new LanSyncAdapter');
-    expect(composition).toContain('applyLanRemoteText');
+    expect(composition).toContain('applyLanRemoteContent');
     expect(composition).toContain('getUnifiedSyncRuntime().observeClipboardChange');
   });
 

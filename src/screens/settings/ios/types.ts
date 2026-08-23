@@ -1,5 +1,6 @@
 export type SettingsPage =
   | 'root'
+  | 'syncChannel'
   | 'space'
   | 'lanServers'
   | 'storage'

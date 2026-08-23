@@ -1,17 +1,28 @@
 import { createServer, type Server } from 'node:http';
 import { Buffer } from 'node:buffer';
-import { afterEach, describe, expect, it } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
 type ProbeResult = 'Success' | 'AuthFailed' | 'Unreachable' | 'MissingFields';
 
 function loadProbe():
   | {
-      probeLanServers(input: {
-        urls: string[];
-        username: string;
-        password: string;
-        timeoutMs?: number;
-      }): Promise<Record<string, ProbeResult>>;
+      probeLanServers(
+        input: {
+          urls: string[];
+          username: string;
+          password: string;
+          allowInsecureTls?: boolean;
+          timeoutMs?: number;
+        },
+        dependencies?: {
+          insecureTransport: {
+            getJson(
+              url: string,
+              headers: Record<string, string>
+            ): Promise<{ status: number; data?: unknown }>;
+          };
+        }
+      ): Promise<Record<string, ProbeResult>>;
     }
   | undefined {
   try {
@@ -92,5 +103,30 @@ describe('probeLanServers', () => {
         timeoutMs: 20,
       })
     ).resolves.toEqual({ [`${base}/slow`]: 'Unreachable' });
+  });
+
+  it('uses the self-signed HTTPS transport when the user enables it', async () => {
+    const probe = loadProbe();
+    expect(probe).toBeDefined();
+    if (!probe) return;
+    const insecureTransport = {
+      getJson: jest.fn(async () => ({ status: 404 })),
+    };
+    const url = 'https://self-signed.local:42720';
+
+    await expect(
+      probe.probeLanServers(
+        {
+          urls: [url],
+          username: 'mobile',
+          password: 'secret',
+          allowInsecureTls: true,
+        },
+        { insecureTransport }
+      )
+    ).resolves.toEqual({ [url]: 'Success' });
+    expect(insecureTransport.getJson).toHaveBeenCalledWith(`${url}/SyncClipboard.json`, {
+      authorization: expect.stringMatching(/^Basic /),
+    });
   });
 });

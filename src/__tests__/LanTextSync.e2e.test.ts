@@ -53,7 +53,7 @@ async function startDesktopFixture() {
 describe('LAN text sync end to end', () => {
   it('pulls desktop text, uploads phone text, then applies the next desktop text', async () => {
     const desktop = await startDesktopFixture();
-    const applyRemoteText = jest.fn(async () => undefined);
+    const applyRemoteContent = jest.fn(async () => undefined);
     const adapter = new LanSyncAdapter({
       getActiveServer: async () => ({
         name: 'Desktop',
@@ -63,7 +63,8 @@ describe('LAN text sync end to end', () => {
         allowInsecureTls: false,
       }),
       readClipboard: async () => null,
-      applyRemoteText,
+      applyRemoteContent,
+      preparePayloadTempUri: (profileHash, dataName) => `file:///cache/${profileHash}-${dataName}`,
       client: new LanHttpClient(),
     });
 
@@ -72,7 +73,7 @@ describe('LAN text sync end to end', () => {
       profileId: 'default',
       policy: { appState: 'active', backgroundSyncEnabled: false },
     });
-    expect(applyRemoteText).toHaveBeenLastCalledWith(
+    expect(applyRemoteContent).toHaveBeenLastCalledWith(
       expect.objectContaining({ text: 'first desktop text', profileHash: 'DESKTOP_ONE' })
     );
 
@@ -94,10 +95,10 @@ describe('LAN text sync end to end', () => {
       size: 19,
     });
     await adapter.synchronize();
-    expect(applyRemoteText).toHaveBeenLastCalledWith(
+    expect(applyRemoteContent).toHaveBeenLastCalledWith(
       expect.objectContaining({ text: 'second desktop text', profileHash: 'DESKTOP_TWO' })
     );
-    expect(applyRemoteText).toHaveBeenCalledTimes(2);
+    expect(applyRemoteContent).toHaveBeenCalledTimes(2);
     await adapter.stop();
   });
 });

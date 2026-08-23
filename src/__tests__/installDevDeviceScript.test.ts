@@ -52,6 +52,14 @@ describe('install-dev-device.sh', () => {
     expect(script).toContain('build-android-aar.sh');
   });
 
+  it('restores cached local iOS artifacts when the staged framework was replaced', () => {
+    const script = readFileSync(scriptPath, 'utf8');
+
+    expect(script).toContain('restore_cached_local_ios_engine()');
+    expect(script).toContain('verify-unified-engine-core.mjs" --local-prepared');
+    expect(script).toContain('local dist_dir="$LOCAL_ENGINE_BUILD_ROOT/uc-engine-uniffi-dist/ios"');
+  });
+
   it('prepares only the Engine artifacts required by the requested platform', () => {
     const script = readFileSync(scriptPath, 'utf8');
 

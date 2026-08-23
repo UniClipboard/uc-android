@@ -12,8 +12,14 @@ const sync = {
   switchTo: jest.fn(async () => undefined),
 };
 
+const updateConfig = jest.fn(async (updates: { syncChannel?: 'lan' | 'p2p' }) => {
+  Object.assign(settingsState.config, updates);
+  return { ok: true as const };
+});
+
 const settingsState = {
   config: {
+    syncChannel: 'lan' as 'lan' | 'p2p',
     autoApplyRemote: true,
     autoPushLocal: true,
     enableBackgroundTasks: true,
@@ -50,6 +56,7 @@ configureAppRuntime({
       loadConfig: jest.fn(async () => undefined),
       setEnableBackgroundTasks: jest.fn(),
       setTempDisabledBackgroundTasks: jest.fn(),
+      updateConfig,
     }),
     subscribe: jest.fn(() => jest.fn()),
   },
@@ -85,7 +92,7 @@ describe('BackgroundServiceManager sync policy', () => {
         profileId: 'default',
         policy: { appState: 'background', backgroundSyncEnabled: true },
       },
-      'p2p'
+      'lan'
     );
   });
 
@@ -103,6 +110,7 @@ describe('BackgroundServiceManager sync policy', () => {
   it('selects P2P without bypassing the unified runtime', async () => {
     await getAppRuntime().activateP2p();
 
-    expect(sync.switchTo).toHaveBeenCalledWith('p2p');
+    expect(updateConfig).toHaveBeenCalledWith({ syncChannel: 'p2p' });
+    expect(sync.switchTo).toHaveBeenCalledWith('p2p', { rollbackOnFailure: false });
   });
 });

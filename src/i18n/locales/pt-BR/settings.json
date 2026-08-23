@@ -18,6 +18,16 @@
     "sectionTitle": "Geral",
     "theme": "Tema"
   },
+  "syncChannel": {
+    "title": "Método de sincronização",
+    "lan": "Sincronização padrão",
+    "p2p": "Conexão direta entre dispositivos",
+    "default": "Padrão",
+    "experimental": "Experimental",
+    "currentConnection": "Conexão atual",
+    "connectionSettings": "Configurações da conexão",
+    "notConfigured": "Não configurado"
+  },
   "category": {
     "sync": "Sincronização",
     "about": "Sobre",

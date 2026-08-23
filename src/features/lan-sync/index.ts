@@ -1,6 +1,6 @@
 export {
   LanSyncAdapter,
-  type ApplyLanRemoteTextInput,
+  type ApplyLanRemoteContentInput,
   type LanSyncAdapterDependencies,
 } from './internal/lanSyncAdapter';
 export {
@@ -8,8 +8,9 @@ export {
   LanAuthenticationError,
   LanUnavailableError,
   type LanClipboardDocument,
+  type LanPayloadUpload,
 } from './internal/lanHttpClient';
 export {
-  LanRemoteTextApplier,
-  type LanRemoteTextApplierDependencies,
-} from './internal/lanRemoteTextApplier';
+  LanRemoteContentApplier,
+  type LanRemoteContentApplierDependencies,
+} from './internal/lanRemoteContentApplier';

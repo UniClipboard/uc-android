@@ -82,8 +82,10 @@ export interface SettingsNavRowProps {
   value?: string;
   /** Hex color for the trailing text; defaults to secondary label. */
   valueColor?: string;
+  badge?: string;
   destructive?: boolean;
   disabled?: boolean;
+  selected?: boolean;
   showsChevron?: boolean;
   showsPressFeedback?: boolean;
   accessibilityHint?: string;
@@ -97,8 +99,10 @@ export function SettingsNavRow({
   title,
   value,
   valueColor,
+  badge,
   destructive = false,
   disabled = false,
+  selected = false,
   showsChevron = true,
   showsPressFeedback = true,
   accessibilityHint,
@@ -137,6 +141,19 @@ export function SettingsNavRow({
           <SettingsIconTile systemName={icon} color={iconColor} />
         ) : null}
         <SwiftUIText modifiers={[foregroundStyle(destructive ? settingsTileColors.red : 'primary')]}>{title}</SwiftUIText>
+        {badge ? (
+          <SwiftUIText
+            modifiers={[
+              font({ size: 11, weight: 'semibold' }),
+              foregroundStyle('white'),
+              padding({ horizontal: 6, vertical: 2 }),
+              background(settingsTileColors.orange),
+              cornerRadius(5),
+            ]}
+          >
+            {badge}
+          </SwiftUIText>
+        ) : null}
         <Spacer />
         {value ? (
           <SwiftUIText
@@ -145,6 +162,7 @@ export function SettingsNavRow({
             {value}
           </SwiftUIText>
         ) : null}
+        {selected ? <Image systemName="checkmark" size={14} color={statusGreen} /> : null}
         {showsChevron ? <Image systemName="chevron.right" size={12} color={chevronColor} /> : null}
       </HStack>
     </SwiftUIButton>

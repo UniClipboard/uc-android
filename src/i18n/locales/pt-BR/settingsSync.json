@@ -295,8 +295,8 @@
     "danger": { "title": "Zona de perigo" }
   },
   "lan": {
-    "title": "Servidores da rede local",
-    "summary": "Gerencie servidores HTTP / HTTPS",
+    "title": "Configurações da conexão",
+    "summary": "Gerencie conexões de sincronização",
     "configuredCount_one": "{{count}} servidor",
     "configuredCount_other": "{{count}} servidores",
     "active": "Atual",
@@ -334,7 +334,7 @@
     "makeActive": "Definir como atual",
     "deleteTitle": "Excluir servidor",
     "deleteMessage": "Os dados do servidor e a senha serão removidos deste dispositivo.",
-    "notAvailableYet": "Os dados ficam salvos localmente. A sincronização LAN será conectada na próxima etapa.",
+    "notAvailableYet": "Os dados da conexão ficam neste dispositivo e as senhas usam o armazenamento seguro do sistema.",
     "qr": {
       "title": "Escanear QR do servidor",
       "hint": "Coloque o código QR dentro da moldura",

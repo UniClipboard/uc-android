@@ -164,11 +164,11 @@ export function useLanServerEditor({
     setIsProbing(true);
     setProbeResults(null);
     try {
-      setProbeResults(await probeLanServers({ urls, username, password }));
+      setProbeResults(await probeLanServers({ urls, username, password, allowInsecureTls }));
     } finally {
       setIsProbing(false);
     }
-  }, [password, urls, username]);
+  }, [allowInsecureTls, password, urls, username]);
 
   const canSave = useMemo(
     () => urls.some((url) => url.trim()) && Boolean(username.trim()) && password.length > 0,

@@ -58,4 +58,20 @@ describe('iOS settings navigation rows', () => {
     expect(settingsCommon).toContain('iconColor?: string;');
     expect(row).toContain('icon && iconColor ? (');
   });
+
+  it('can show a native checkmark for a selected setting row', () => {
+    const row = settingsCommon.match(/export function SettingsNavRow[\s\S]*?\n}\n\n\/\*\*/)?.[0];
+
+    expect(settingsCommon).toContain('selected?: boolean;');
+    expect(row).toContain('selected ? <Image systemName="checkmark"');
+  });
+
+  it('can show a compact badge without duplicating the settings row', () => {
+    const row = settingsCommon.match(/export function SettingsNavRow[\s\S]*?\n}\n\n\/\*\*/)?.[0];
+
+    expect(settingsCommon).toContain('badge?: string;');
+    expect(row).toContain('{badge ? (');
+    expect(row).toMatch(/<SwiftUIText[\s\S]*?\{badge\}[\s\S]*?<\/SwiftUIText>/);
+    expect(row!.indexOf('{badge ? (')).toBeLessThan(row!.indexOf('<Spacer />'));
+  });
 });

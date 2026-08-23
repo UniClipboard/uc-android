@@ -5,22 +5,25 @@ import {
   noteApplied,
   useClipboardStore,
 } from '@/features/clipboard';
+import { File } from 'expo-file-system';
 import { useHistoryStore } from '@/features/history';
-import type { ApplyLanRemoteTextInput } from './internal/lanSyncAdapter';
-import { LanRemoteTextApplier } from './internal/lanRemoteTextApplier';
+import type { ApplyLanRemoteContentInput } from './internal/lanSyncAdapter';
+import { LanRemoteContentApplier } from './internal/lanRemoteContentApplier';
 
-const productionApplier = new LanRemoteTextApplier({
+const productionApplier = new LanRemoteContentApplier({
   pauseClipboardMonitoring: () => clipboardMonitor.pausePolling(),
   resumeClipboardMonitoring: () => clipboardMonitor.resumePolling(),
   setClipboardContent: (content) => clipboardManager.setClipboardContent(content),
+  readClipboardContent: () => clipboardManager.getClipboardContent(),
   setClipboardWatermark: (content) => clipboardMonitor.setLastContent(content),
   noteApplied,
   clearActivate,
   addHistoryItem: (item) => useHistoryStore.getState().addItem(item),
   setCurrentContentDisplay: (content) =>
     useClipboardStore.getState().setCurrentContentDisplay(content),
+  readTextFile: (uri) => new File(uri).text(),
 });
 
-export function applyLanRemoteText(input: ApplyLanRemoteTextInput): Promise<void> {
+export function applyLanRemoteContent(input: ApplyLanRemoteContentInput): Promise<void> {
   return productionApplier.apply(input);
 }

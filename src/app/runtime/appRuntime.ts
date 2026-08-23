@@ -40,6 +40,9 @@ export interface AppRuntimeDependencies {
   settingsStore: {
     getState(): RuntimeSettingsState & {
       loadConfig(): Promise<void>;
+      updateConfig(
+        updates: Partial<AppSettings>
+      ): Promise<{ ok: true } | { ok: false; error: string }>;
       setEnableBackgroundTasks(enabled: boolean): void;
       setTempDisabledBackgroundTasks(disabled: boolean): void;
     };
@@ -184,7 +187,13 @@ export class AppRuntime {
   }
 
   async activateP2p(): Promise<void> {
-    await this.dependencies.sync().switchTo('p2p');
+    const settings = this.dependencies.settingsStore.getState();
+    if (settings.config?.syncChannel !== 'p2p') {
+      const result = await settings.updateConfig({ syncChannel: 'p2p' });
+      if (!result.ok) throw new Error(result.error);
+    }
+    this.selectedTransport = 'p2p';
+    await this.dependencies.sync().switchTo('p2p', { rollbackOnFailure: false });
   }
 
   // ─── 私有实现 ─────────────────────────────────────────────
@@ -218,13 +227,7 @@ export class AppRuntime {
 
   private getSelectedTransport(): SyncTransportId {
     const config = this.dependencies.settingsStore.getState().config;
-    if (
-      config?.activeLanServerId &&
-      config.lanServers?.some((server) => server.id === config.activeLanServerId)
-    ) {
-      return 'lan';
-    }
-    return 'p2p';
+    return config?.syncChannel ?? 'lan';
   }
 
   private async _drainRefreshes(): Promise<void> {

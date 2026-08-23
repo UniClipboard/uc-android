@@ -61,6 +61,25 @@ assert_development_project() {
   fi
 }
 
+restore_cached_local_ios_engine() {
+  local dist_dir="$LOCAL_ENGINE_BUILD_ROOT/uc-engine-uniffi-dist/ios"
+  local module_dir="$PROJECT_ROOT/modules/uc-engine/ios"
+  local dist_framework="$dist_dir/UniClipboardEngine.xcframework"
+  local module_framework="$module_dir/UniClipboardEngine.xcframework"
+  local dist_binding="$dist_dir/uc_engine_uniffi.swift"
+
+  if [ ! -d "$dist_framework" ] || [ ! -f "$dist_binding" ]; then
+    return 1
+  fi
+  mkdir -p "$module_dir/Bindings"
+  if [ -d "$module_framework" ]; then
+    find "$module_framework" -depth -delete
+  fi
+  ditto "$dist_framework" "$module_framework"
+  cp "$dist_binding" "$module_dir/Bindings/uc_engine_uniffi.swift"
+  node "$SCRIPT_DIR/verify-unified-engine-core.mjs" --local-prepared
+}
+
 prepare_latest_engine() {
   local platform="$1"
   local ios_marker="$LOCAL_ENGINE_BUILD_ROOT/uc-engine-uniffi-dist/ios/source-commit.txt"
@@ -94,7 +113,16 @@ prepare_latest_engine() {
   esac
   prepared_commit="$(cat "$marker_file" 2>/dev/null || true)"
   if [ "$prepared_commit" = "$latest_commit" ]; then
-    return
+    if [ "$platform" != "ios" ]; then
+      return
+    fi
+    if node "$SCRIPT_DIR/verify-unified-engine-core.mjs" --local-prepared >/dev/null 2>&1; then
+      return
+    fi
+    echo "Restoring cached iOS Engine from origin/main ($latest_commit)"
+    if restore_cached_local_ios_engine; then
+      return
+    fi
   fi
 
   echo "Preparing $platform Engine from origin/main ($latest_commit)"

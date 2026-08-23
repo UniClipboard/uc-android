@@ -46,7 +46,7 @@ export interface SyncDeliveryCounts {
 
 export type SyncAdapterEvent =
   | { type: 'contentChanged' }
-  | { type: 'connectionChanged' }
+  | { type: 'connectionChanged'; connected?: boolean; message?: string }
   | { type: 'configurationChanged' }
   | { type: 'failed'; message: string };
 
