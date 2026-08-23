@@ -15,6 +15,7 @@ import type {
 } from '@/features/sync/contracts';
 import {
   LanHttpClient,
+  LanUnavailableError,
   type LanClipboardDocument,
   type LanPayloadUpload,
   type LanSseEvent,
@@ -60,7 +61,7 @@ interface LanHttpPort {
 }
 
 export interface LanSyncAdapterDependencies {
-  getActiveServer(): Promise<LanServerDraft | null>;
+  getServer(serverId?: string): Promise<LanServerDraft | null>;
   readClipboard(): Promise<ClipboardContent | null>;
   applyRemoteContent(input: ApplyLanRemoteContentInput): Promise<void>;
   preparePayloadTempUri(profileHash: string, dataName: string): string;
@@ -150,7 +151,7 @@ export class LanSyncAdapter implements SyncAdapter {
 
   async start(context: SyncStartContext): Promise<void> {
     this.policy = context.policy;
-    this.server = await this.dependencies.getActiveServer();
+    this.server = await this.dependencies.getServer();
     this.running = true;
     if (!this.server) return;
     try {
@@ -175,7 +176,7 @@ export class LanSyncAdapter implements SyncAdapter {
 
   async refresh(policy: SyncRuntimePolicy): Promise<void> {
     this.policy = policy;
-    const nextServer = await this.dependencies.getActiveServer();
+    const nextServer = await this.dependencies.getServer();
     const serverChanged = this.serverIdentity(this.server) !== this.serverIdentity(nextServer);
     if (serverChanged) {
       this.syncEpoch += 1;
@@ -277,6 +278,8 @@ export class LanSyncAdapter implements SyncAdapter {
   }
 
   async sendCurrentClipboard(): Promise<SyncAdapterDelivery> {
+    const server = this.server;
+    if (!server) throw new Error('LAN adapter is not started');
     const content = await this.dependencies.readClipboard();
     if (!content) throw new Error('LAN clipboard content is unavailable');
     if (!content.profileHash) throw new Error('LAN clipboard content is missing its content hash');
@@ -284,10 +287,11 @@ export class LanSyncAdapter implements SyncAdapter {
       const text =
         content.hasData && content.fileUri ? await new File(content.fileUri).text() : content.text;
       if (!text) throw new Error('LAN clipboard text is unavailable');
-      return this.pushText(text, content.profileHash);
+      return this.pushText(server, text, content.profileHash);
     }
     if ((content.type === 'Image' || content.type === 'File') && content.fileUri) {
       return this.pushAsset(
+        server,
         {
           kind: content.type === 'Image' ? 'image' : 'file',
           uri: content.fileUri,
@@ -302,17 +306,29 @@ export class LanSyncAdapter implements SyncAdapter {
   async sendImportedText(
     text: string,
     profileHash: string,
-    _options?: SyncSendOptions
+    options?: SyncSendOptions
   ): Promise<SyncAdapterDelivery> {
-    return this.pushText(text, profileHash);
+    if (options?.targetIds?.length) {
+      return this.sendToTargets(options.targetIds, (server) =>
+        this.pushText(server, text, profileHash)
+      );
+    }
+    if (!this.server) throw new Error('LAN adapter is not started');
+    return this.pushText(this.server, text, profileHash);
   }
 
   async sendImportedAsset(
     asset: SyncImportedAsset,
     profileHash: string,
-    _options?: SyncSendOptions
+    options?: SyncSendOptions
   ): Promise<SyncAdapterDelivery> {
-    return this.pushAsset(asset, profileHash);
+    if (options?.targetIds?.length) {
+      return this.sendToTargets(options.targetIds, (server) =>
+        this.pushAsset(server, asset, profileHash)
+      );
+    }
+    if (!this.server) throw new Error('LAN adapter is not started');
+    return this.pushAsset(this.server, asset, profileHash);
   }
 
   async observeClipboardChange(
@@ -324,10 +340,15 @@ export class LanSyncAdapter implements SyncAdapter {
     if (content.type === 'Text') {
       const text =
         content.hasData && content.fileUri ? await new File(content.fileUri).text() : content.text;
-      if (text) return this.pushText(text, content.profileHash);
+      if (text) {
+        if (!this.server) throw new Error('LAN adapter is not started');
+        return this.pushText(this.server, text, content.profileHash);
+      }
     }
     if ((content.type === 'Image' || content.type === 'File') && content.fileUri) {
+      if (!this.server) throw new Error('LAN adapter is not started');
       return this.pushAsset(
+        this.server,
         {
           kind: content.type === 'Image' ? 'image' : 'file',
           uri: content.fileUri,
@@ -344,8 +365,11 @@ export class LanSyncAdapter implements SyncAdapter {
     return () => this.subscribers.delete(listener);
   }
 
-  private async pushText(text: string, profileHash: string): Promise<SyncAdapterDelivery> {
-    if (!this.server) throw new Error('LAN adapter is not started');
+  private async pushText(
+    server: LanServerDraft,
+    text: string,
+    profileHash: string
+  ): Promise<SyncAdapterDelivery> {
     const size = countGraphemes(text);
     let payload: LanPayloadUpload | undefined;
     let document: LanClipboardDocument = {
@@ -372,25 +396,27 @@ export class LanSyncAdapter implements SyncAdapter {
       };
     }
     if (payload) {
-      await this.client.putClipboard(this.server, document, payload);
+      await this.client.putClipboard(server, document, payload);
     } else {
-      await this.client.putClipboard(this.server, document);
+      await this.client.putClipboard(server, document);
     }
-    this.lastRemoteIdentity = profileHash;
+    if (this.serverIdentity(server) === this.serverIdentity(this.server)) {
+      this.lastRemoteIdentity = profileHash;
+    }
     return delivered();
   }
 
   private async pushAsset(
+    server: LanServerDraft,
     asset: SyncImportedAsset,
     profileHash: string
   ): Promise<SyncAdapterDelivery> {
-    if (!this.server) throw new Error('LAN adapter is not started');
     const dataName =
       asset.kind === 'image'
         ? `image.${imageExtension(asset)}`
         : safeFileName(asset.fileName, asset.uri);
     await this.client.putClipboard(
-      this.server,
+      server,
       {
         type: asset.kind === 'image' ? 'Image' : 'File',
         hash: profileHash,
@@ -405,8 +431,42 @@ export class LanSyncAdapter implements SyncAdapter {
         mimeType: asset.mimeType ?? undefined,
       }
     );
-    this.lastRemoteIdentity = profileHash;
+    if (this.serverIdentity(server) === this.serverIdentity(this.server)) {
+      this.lastRemoteIdentity = profileHash;
+    }
     return delivered();
+  }
+
+  private async sendToTargets(
+    targetIds: string[],
+    send: (server: LanServerDraft) => Promise<SyncAdapterDelivery>
+  ): Promise<SyncAdapterDelivery> {
+    const uniqueTargetIds = [...new Set(targetIds)];
+    const results = await Promise.allSettled(
+      uniqueTargetIds.map(async (targetId) => {
+        const server = await this.dependencies.getServer(targetId);
+        if (!server) throw new Error('LAN server not found');
+        await send(server);
+      })
+    );
+    const accepted = results.filter((result) => result.status === 'fulfilled').length;
+    const offline = results.filter(
+      (result) => result.status === 'rejected' && result.reason instanceof LanUnavailableError
+    ).length;
+    const errored = results.length - accepted - offline;
+    const state =
+      accepted === results.length
+        ? 'delivered'
+        : accepted > 0
+        ? 'partial'
+        : offline === results.length
+        ? 'offline'
+        : 'failed';
+    return {
+      success: accepted > 0,
+      state,
+      counts: { accepted, duplicate: 0, offline, errored, pending: 0 },
+    };
   }
 
   private schedulePolling(): void {

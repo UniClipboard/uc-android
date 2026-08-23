@@ -44,9 +44,13 @@ import {
   iosSaturatedButtonPalette,
 } from '@/components/ui/iosButtonStyles.ios';
 import { iosColors, iosKindTints } from '@/theme/iosDesignTokens';
-import type { UnifiedSpaceDevice } from '@/features/space';
 import type { ShareSendSheetProps } from './ShareSendSheet.types';
-import { useShareSendController, formatBytes, type ShareJobView } from './useShareSendController';
+import {
+  useShareSendController,
+  formatBytes,
+  type ShareJobView,
+  type ShareTarget,
+} from './useShareSendController';
 
 const TERTIARY_LABEL = iosColors?.tertiaryLabel ?? '#8E8E93';
 const IMAGE_PREVIEW_SIZE = 64;
@@ -123,12 +127,13 @@ function Body({ c }: { c: ReturnType<typeof useShareSendController> }) {
     <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
       <IosSheetForm modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         <ContentSection views={c.jobViews} title={t('send.title')} />
-        <DeviceSection
-          devices={c.devices}
-          selectedDeviceIds={c.selectedDeviceIds}
-          onToggle={c.toggleDevice}
-          title={t('send.devices')}
-          emptyLabel={t('send.noDevices')}
+        <TargetSection
+          targets={c.targets}
+          selectedTargetIds={c.selectedTargetIds}
+          onToggle={c.toggleTarget}
+          title={t(c.targetKind === 'server' ? 'send.servers' : 'send.devices')}
+          emptyLabel={t(c.targetKind === 'server' ? 'send.noServers' : 'send.noDevices')}
+          isLoading={c.isLoadingTargets}
         />
       </IosSheetForm>
       <SendFooter c={c} />
@@ -178,33 +183,37 @@ function ContentSection({ title, views }: { title: string; views: ShareJobView[]
   );
 }
 
-function DeviceSection({
-  devices,
-  selectedDeviceIds,
+function TargetSection({
+  targets,
+  selectedTargetIds,
   onToggle,
   title,
   emptyLabel,
+  isLoading,
 }: {
-  devices: UnifiedSpaceDevice[];
-  selectedDeviceIds: Set<string>;
-  onToggle: (deviceId: string) => void;
+  targets: ShareTarget[];
+  selectedTargetIds: Set<string>;
+  onToggle: (targetId: string) => void;
   title: string;
   emptyLabel: string;
+  isLoading: boolean;
 }) {
   return (
     <Section title={title}>
-      {devices.length === 0 ? (
+      {isLoading ? (
+        <ProgressView />
+      ) : targets.length === 0 ? (
         <SwiftUIText
           modifiers={[foregroundStyle('secondary'), font({ size: 14 }), padding({ vertical: 8 })]}
         >
           {emptyLabel}
         </SwiftUIText>
       ) : (
-        devices.map((device) => (
-          <DeviceRow
-            key={device.deviceId}
-            device={device}
-            selected={selectedDeviceIds.has(device.deviceId)}
+        targets.map((target) => (
+          <TargetRow
+            key={target.id}
+            target={target}
+            selected={selectedTargetIds.has(target.id)}
             onToggle={onToggle}
           />
         ))
@@ -282,18 +291,18 @@ function JobLeading({ view }: { view: ShareJobView }) {
   );
 }
 
-function DeviceRow({
-  device,
+function TargetRow({
+  target,
   selected,
   onToggle,
 }: {
-  device: UnifiedSpaceDevice;
+  target: ShareTarget;
   selected: boolean;
-  onToggle: (deviceId: string) => void;
+  onToggle: (targetId: string) => void;
 }) {
   return (
     <SwiftUIButton
-      onPress={() => onToggle(device.deviceId)}
+      onPress={() => onToggle(target.id)}
       modifiers={[
         buttonStyle('plain'),
         accessibilityValue(selected ? 'selected' : 'not selected'),
@@ -309,9 +318,18 @@ function DeviceRow({
           padding({ vertical: 12 }),
         ]}
       >
-        <SwiftUIText modifiers={[font({ size: 16 }), foregroundStyle('primary')]}>
-          {device.displayName}
-        </SwiftUIText>
+        <VStack alignment="leading" spacing={2}>
+          <SwiftUIText modifiers={[font({ size: 16 }), foregroundStyle('primary')]}>
+            {target.displayName}
+          </SwiftUIText>
+          {target.detail ? (
+            <SwiftUIText
+              modifiers={[font({ size: 12 }), foregroundStyle('secondary'), lineLimit(1)]}
+            >
+              {target.detail}
+            </SwiftUIText>
+          ) : null}
+        </VStack>
         <Spacer />
         {selected ? (
           <Image systemName="checkmark.circle.fill" size={22} color={iosKindTints.text} />

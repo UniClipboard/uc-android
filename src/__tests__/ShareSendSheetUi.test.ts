@@ -6,6 +6,11 @@ const read = (file: string) =>
 
 const ios = read('ShareSendSheet.ios.tsx');
 const android = read('ShareSendSheet.android.tsx');
+const locales = ['en', 'zh', 'ru', 'pt-BR'].map((locale) =>
+  JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, `../i18n/locales/${locale}/share.json`), 'utf8')
+  )
+);
 
 describe('ShareSendSheet presentation', () => {
   it('opens the iOS sheet at full height by default', () => {
@@ -20,9 +25,9 @@ describe('ShareSendSheet presentation', () => {
     expect(ios).toContain('background(SHEET_BACKGROUND)');
   });
 
-  it('puts the shared-content section before device selection on both platforms', () => {
-    expect(ios.indexOf('<ContentSection')).toBeLessThan(ios.indexOf('<DeviceSection'));
-    expect(android.indexOf('<ContentSection')).toBeLessThan(android.indexOf('<DeviceSection'));
+  it('puts the shared-content section before target selection on both platforms', () => {
+    expect(ios.indexOf('<ContentSection')).toBeLessThan(ios.indexOf('<TargetSection'));
+    expect(android.indexOf('<ContentSection')).toBeLessThan(android.indexOf('<TargetSection'));
   });
 
   it('uses a compact preview and a clear bottom send action on iOS', () => {
@@ -45,7 +50,7 @@ describe('ShareSendSheet presentation', () => {
 
   it('anchors iOS device information left and the selection control right', () => {
     expect(ios).toContain('listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 })');
-    const deviceRow = ios.match(/function DeviceRow[\s\S]*?\n}\n\nconst styles/)?.[0];
+    const deviceRow = ios.match(/function TargetRow[\s\S]*?\n}\n\nconst styles/)?.[0];
 
     expect(deviceRow).toContain('<Spacer />');
     expect(deviceRow?.indexOf('<Spacer />')).toBeLessThan(
@@ -55,7 +60,7 @@ describe('ShareSendSheet presentation', () => {
 
   it('gives Android selected device rows full-row feedback and selection semantics', () => {
     expect(android).toContain('accessibilityState={{ selected }}');
-    expect(android).toContain('selected && styles.deviceRowSelected');
+    expect(android).toContain('selected && styles.targetRowSelected');
   });
 
   it('keeps Android share sheet content in the React Native view tree', () => {
@@ -75,17 +80,19 @@ describe('ShareSendSheet presentation', () => {
     expect(ios).toContain('accessibilityValue(selected ?');
   });
 
-  it('shows share recipients by name without connection status on both platforms', () => {
-    const iosDeviceRow = ios.match(/function DeviceRow[\s\S]*?\n}\n\nconst styles/)?.[0];
-    const androidDeviceRow = android.match(/function DeviceRow[\s\S]*?\n}\n\nconst styles/)?.[0];
+  it('renders the active channel targets without device-only row types', () => {
+    expect(ios).toContain('target.displayName');
+    expect(android).toContain('target.displayName');
+    expect(ios).toContain('target.detail');
+    expect(android).toContain('target.detail');
+    expect(ios).not.toContain('UnifiedSpaceDevice');
+    expect(android).not.toContain('UnifiedSpaceDevice');
+  });
 
-    expect(iosDeviceRow).toContain('device.displayName');
-    expect(androidDeviceRow).toContain('device.displayName');
-    expect(iosDeviceRow).not.toContain('space.devices.online');
-    expect(iosDeviceRow).not.toContain('space.devices.offline');
-    expect(androidDeviceRow).not.toContain('space.devices.online');
-    expect(androidDeviceRow).not.toContain('space.devices.offline');
-    expect(iosDeviceRow).not.toContain('Image systemName="circle.fill" size={9}');
-    expect(androidDeviceRow).not.toContain('styles.statusDot');
+  it('localizes LAN server target states in every supported language', () => {
+    for (const messages of locales) {
+      expect(messages.send.servers).toEqual(expect.any(String));
+      expect(messages.send.noServers).toEqual(expect.any(String));
+    }
   });
 });

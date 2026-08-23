@@ -28,7 +28,9 @@ import { createPendingShareStore, type PendingShareJob } from '@/features/transf
 import { getUnifiedSyncRuntime } from '@/features/sync';
 import { importFileToHistory, importTextToHistory } from '@/utils/uploadFile';
 import { getUnifiedSpaceService, useUnifiedSpaceStore } from '@/features/space';
+import { useSettingsStore } from '@/features/settings';
 import { createLogger } from '@/support/observability';
+import { useLanMySpaceSheet } from '../useLanMySpaceSheet';
 
 const log = createLogger('ShareSendSheet');
 
@@ -57,6 +59,12 @@ export interface ShareJobView {
   previewText?: string;
   sendState: JobSendState;
   errorMessage?: string;
+}
+
+export interface ShareTarget {
+  id: string;
+  displayName: string;
+  detail?: string;
 }
 
 const TEXT_PREVIEW_MAX_CHARS = 80;
@@ -92,12 +100,28 @@ async function loadPreview(job: PendingShareJob): Promise<ShareJobView> {
 
 export function useShareSendController(onClose: () => void, active: boolean) {
   const { t } = useTranslation('share');
+  const syncChannel = useSettingsStore((state) => state.config?.syncChannel ?? 'lan');
   const spaceDevices = useUnifiedSpaceStore((s) => s.devices);
-  const devices = useMemo(() => spaceDevices.filter((device) => !device.isLocal), [spaceDevices]);
+  const lan = useLanMySpaceSheet(active && syncChannel === 'lan');
+  const targets = useMemo<ShareTarget[]>(
+    () =>
+      syncChannel === 'lan'
+        ? lan.servers
+            .filter((server) => server.status === 'online')
+            .map((server) => ({
+              id: server.id,
+              displayName: server.name,
+              detail: server.address,
+            }))
+        : spaceDevices
+            .filter((device) => !device.isLocal)
+            .map((device) => ({ id: device.deviceId, displayName: device.displayName })),
+    [lan.servers, spaceDevices, syncChannel]
+  );
 
   const [phase, setPhase] = useState<Phase>({ kind: 'claiming' });
   const [jobViews, setJobViews] = useState<ShareJobView[]>([]);
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set());
+  const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(new Set());
   const sendingRef = useRef(false);
   const hasAppliedDefaultSelectionRef = useRef(false);
   const successCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,9 +137,11 @@ export function useShareSendController(onClose: () => void, active: boolean) {
   const claim = useCallback(async () => {
     try {
       // 打开时刷新一次设备快照;失败沿用现有快照,不阻断弹层(§8.4)
-      void getUnifiedSpaceService()
-        .refreshDevices()
-        .catch(() => undefined);
+      if (syncChannel === 'p2p') {
+        void getUnifiedSpaceService()
+          .refreshDevices()
+          .catch(() => undefined);
+      }
       const store = createPendingShareStore();
       await store.cleanup();
       const jobs = await getOutboundShareHandoffManager().claimPending();
@@ -138,7 +164,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
       });
       setPhase({ kind: 'error', message: t('send.claimFailed') });
     }
-  }, [t]);
+  }, [syncChannel, t]);
 
   // 会话开关:active=false 结束会话(重置发送锁);true 开始新会话,
   // 重置状态并重新认领(组件常驻挂载,不依赖 mount)。lastActiveRef 保证
@@ -155,9 +181,15 @@ export function useShareSendController(onClose: () => void, active: boolean) {
     if (wasActive) return;
     setPhase({ kind: 'claiming' });
     setJobViews([]);
-    setSelectedDeviceIds(new Set());
+    setSelectedTargetIds(new Set());
     void claim();
   }, [active, claim]);
+
+  useEffect(() => {
+    if (!active) return;
+    hasAppliedDefaultSelectionRef.current = false;
+    setSelectedTargetIds(new Set());
+  }, [active, syncChannel]);
 
   useEffect(() => {
     if (active || !successCloseTimerRef.current) return;
@@ -166,12 +198,21 @@ export function useShareSendController(onClose: () => void, active: boolean) {
   }, [active]);
 
   useEffect(() => {
-    if (!active || hasAppliedDefaultSelectionRef.current || devices.length === 0) return;
+    if (!active || hasAppliedDefaultSelectionRef.current || targets.length === 0) return;
     hasAppliedDefaultSelectionRef.current = true;
-    if (devices.length === 1) {
-      setSelectedDeviceIds(new Set([devices[0].deviceId]));
+    if (targets.length === 1) {
+      setSelectedTargetIds(new Set([targets[0].id]));
     }
-  }, [active, devices]);
+  }, [active, targets]);
+
+  useEffect(() => {
+    const availableIds = new Set(targets.map((target) => target.id));
+    setSelectedTargetIds((current) => {
+      const next = new Set([...current].filter((targetId) => availableIds.has(targetId)));
+      if (next.size === current.size) return current;
+      return next;
+    });
+  }, [targets]);
 
   // 发送投递后的统一收尾:只有所有目标确认送达才出队;其他结果保留重试。
   const finishSend = useCallback(
@@ -201,7 +242,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
 
   // 发送单个 job(串行;不自动重试)
   const sendOne = useCallback(
-    async (view: ShareJobView, targetDeviceIds: string[]): Promise<SendResult> => {
+    async (view: ShareJobView, targetIds: string[]): Promise<SendResult> => {
       const { job } = view;
       updateJob(job.id, { sendState: 'sending', errorMessage: undefined });
       setPhase({ kind: 'sending', jobId: job.id, stage: 'importing' });
@@ -212,7 +253,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
           setPhase({ kind: 'sending', jobId: job.id, stage: 'sending' });
           return await finishSend(job.id, () =>
             getUnifiedSyncRuntime().sendImportedText(text, profileHash, {
-              targetIds: targetDeviceIds,
+              targetIds,
             })
           );
         }
@@ -233,7 +274,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
               mimeType: job.mimeType,
             },
             imported.profileHash,
-            { targetIds: targetDeviceIds }
+            { targetIds }
           )
         );
       } catch (error) {
@@ -249,12 +290,12 @@ export function useShareSendController(onClose: () => void, active: boolean) {
   const sendAll = useCallback(async () => {
     if (sendingRef.current) return;
     sendingRef.current = true;
-    const targets = [...selectedDeviceIds];
+    const selectedTargets = [...selectedTargetIds];
     const results: SendResult[] = [];
     try {
       for (const view of jobViews) {
         if (view.sendState === 'success') continue;
-        results.push(await sendOne(view, targets));
+        results.push(await sendOne(view, selectedTargets));
       }
       setPhase({ kind: 'done', results });
       if (results.every((result) => result.success)) {
@@ -267,7 +308,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
     } finally {
       sendingRef.current = false;
     }
-  }, [jobViews, onClose, selectedDeviceIds, sendOne]);
+  }, [jobViews, onClose, selectedTargetIds, sendOne]);
 
   // 重试单个 job(无需重新认领)
   const retryJob = useCallback(
@@ -277,12 +318,12 @@ export function useShareSendController(onClose: () => void, active: boolean) {
       if (!view) return;
       sendingRef.current = true;
       try {
-        await sendOne(view, [...selectedDeviceIds]);
+        await sendOne(view, [...selectedTargetIds]);
       } finally {
         sendingRef.current = false;
       }
     },
-    [jobViews, selectedDeviceIds, sendOne]
+    [jobViews, selectedTargetIds, sendOne]
   );
 
   // 删除(显式):二次确认后清除记录 + payload,不可恢复
@@ -291,11 +332,11 @@ export function useShareSendController(onClose: () => void, active: boolean) {
     setJobViews((views) => views.filter((view) => view.job.id !== jobId));
   }, []);
 
-  const toggleDevice = useCallback((deviceId: string) => {
-    setSelectedDeviceIds((prev) => {
+  const toggleTarget = useCallback((targetId: string) => {
+    setSelectedTargetIds((prev) => {
       const next = new Set(prev);
-      if (next.has(deviceId)) next.delete(deviceId);
-      else next.add(deviceId);
+      if (next.has(targetId)) next.delete(targetId);
+      else next.add(targetId);
       return next;
     });
   }, []);
@@ -318,20 +359,22 @@ export function useShareSendController(onClose: () => void, active: boolean) {
   const isSending = phase.kind === 'sending';
   const isDone = phase.kind === 'done';
   const canSend =
-    phase.kind === 'ready' && selectedDeviceIds.size > 0 && jobViews.length > 0 && !isSending;
+    phase.kind === 'ready' && selectedTargetIds.size > 0 && jobViews.length > 0 && !isSending;
 
   return {
     phase,
     jobViews,
-    devices,
-    selectedDeviceIds,
+    targets,
+    targetKind: syncChannel === 'lan' ? ('server' as const) : ('device' as const),
+    isLoadingTargets: syncChannel === 'lan' && lan.isRefreshing,
+    selectedTargetIds,
     isSending,
     isDone,
     canSend,
     sendAll,
     retryJob,
     deleteJob,
-    toggleDevice,
+    toggleTarget,
     handleClose,
     handleRetryClaim,
     t,

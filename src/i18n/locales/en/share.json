@@ -27,6 +27,8 @@
     "claimFailed": "Couldn't load pending shares. Please try again later.",
     "devices": "Send to devices",
     "noDevices": "No devices yet",
+    "servers": "Send to servers",
+    "noServers": "No available servers",
     "sendAll": "Send",
     "done": "Done",
     "cancel": "Cancel",

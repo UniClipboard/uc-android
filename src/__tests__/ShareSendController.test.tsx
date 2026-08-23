@@ -28,6 +28,27 @@ const mockSendImportedAsset = jest.fn();
 const mockImportTextToHistory = jest.fn();
 const mockImportFileToHistory = jest.fn();
 const mockRecordShareDiagnosticStage = jest.fn();
+let mockSyncChannel: 'lan' | 'p2p' = 'p2p';
+let mockLanServers: Array<{
+  id: string;
+  name: string;
+  address: string;
+  status: 'checking' | 'online' | 'authFailed' | 'offline';
+}> = [];
+
+jest.mock('@/features/settings', () => ({
+  useSettingsStore: (selector: (state: unknown) => unknown) =>
+    selector({ config: { syncChannel: mockSyncChannel } }),
+}));
+
+jest.mock('@/components/useLanMySpaceSheet', () => ({
+  useLanMySpaceSheet: () => ({
+    servers: mockLanServers,
+    isRefreshing: false,
+    refresh: jest.fn(),
+    isUnconfigured: mockLanServers.length === 0,
+  }),
+}));
 
 jest.mock('@/features/transfer', () => ({
   getOutboundShareHandoffManager: () => ({
@@ -174,6 +195,8 @@ describe('useShareSendController', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSyncChannel = 'p2p';
+    mockLanServers = [];
     mockClaimPending.mockResolvedValue([]);
     mockSendImportedText.mockResolvedValue({ success: true, state: 'delivered' });
     mockSendImportedAsset.mockResolvedValue({ success: true, state: 'delivered' });
@@ -223,11 +246,11 @@ describe('useShareSendController', () => {
 
     expect(current.canSend).toBe(false);
     act(() => {
-      current.toggleDevice('desktop-1');
+      current.toggleTarget('desktop-1');
     });
     expect(current.canSend).toBe(true);
     act(() => {
-      current.toggleDevice('desktop-1');
+      current.toggleTarget('desktop-1');
     });
     expect(current.canSend).toBe(false);
   });
@@ -255,7 +278,7 @@ describe('useShareSendController', () => {
       });
     });
 
-    expect(current.devices.map((device) => device.deviceId)).toEqual(['first', 'second']);
+    expect(current.targets.map((target) => target.id)).toEqual(['first', 'second']);
   });
 
   it('preselects the only remote device for a new share session', async () => {
@@ -270,8 +293,74 @@ describe('useShareSendController', () => {
     renderHarness(jest.fn());
     await settle();
 
-    expect([...current.selectedDeviceIds]).toEqual(['desktop']);
+    expect([...current.selectedTargetIds]).toEqual(['desktop']);
     expect(current.canSend).toBe(true);
+  });
+
+  it('shows only reachable LAN servers and sends to every selected server', async () => {
+    mockSyncChannel = 'lan';
+    mockLanServers = [
+      {
+        id: 'home',
+        name: 'Home Mac',
+        address: 'http://home.local:42720',
+        status: 'online',
+      },
+      {
+        id: 'office',
+        name: 'Office Mac',
+        address: 'https://office.local:42720',
+        status: 'authFailed',
+      },
+      {
+        id: 'studio',
+        name: 'Studio PC',
+        address: 'http://studio.local:42720',
+        status: 'online',
+      },
+    ];
+    mockClaimPending.mockResolvedValue([textJob]);
+
+    renderHarness(jest.fn());
+    await settle();
+
+    expect(current.targetKind).toBe('server');
+    expect(current.targets).toEqual([
+      { id: 'home', displayName: 'Home Mac', detail: 'http://home.local:42720' },
+      { id: 'studio', displayName: 'Studio PC', detail: 'http://studio.local:42720' },
+    ]);
+    expect(mockRefreshDevices).not.toHaveBeenCalled();
+
+    act(() => {
+      current.toggleTarget('home');
+      current.toggleTarget('studio');
+    });
+    await act(async () => current.sendAll());
+
+    expect(mockSendImportedText).toHaveBeenCalledWith('hello world', 'HASH-T', {
+      targetIds: ['home', 'studio'],
+    });
+  });
+
+  it('keeps LAN send disabled when no configured server is reachable', async () => {
+    mockSyncChannel = 'lan';
+    mockLanServers = [
+      {
+        id: 'office',
+        name: 'Office Mac',
+        address: 'https://office.local:42720',
+        status: 'offline',
+      },
+    ];
+    mockClaimPending.mockResolvedValue([textJob]);
+
+    renderHarness(jest.fn());
+    await settle();
+
+    expect(current.targetKind).toBe('server');
+    expect(current.targets).toEqual([]);
+    expect(current.selectedTargetIds.size).toBe(0);
+    expect(current.canSend).toBe(false);
   });
 
   it('sends text jobs through history import and completes them on delivery', async () => {
@@ -279,7 +368,7 @@ describe('useShareSendController', () => {
     renderHarness(jest.fn());
     await settle();
     act(() => {
-      current.toggleDevice('desktop-1');
+      current.toggleTarget('desktop-1');
     });
 
     await act(async () => {
@@ -302,7 +391,7 @@ describe('useShareSendController', () => {
     renderHarness(onClose);
     await settle();
     act(() => {
-      current.toggleDevice('desktop-1');
+      current.toggleTarget('desktop-1');
     });
 
     jest.useFakeTimers();
@@ -336,8 +425,8 @@ describe('useShareSendController', () => {
     renderHarness(jest.fn());
     await settle();
     act(() => {
-      current.toggleDevice('desktop-1');
-      current.toggleDevice('laptop-1');
+      current.toggleTarget('desktop-1');
+      current.toggleTarget('laptop-1');
     });
 
     await act(async () => {
@@ -370,7 +459,7 @@ describe('useShareSendController', () => {
     renderHarness(jest.fn());
     await settle();
     act(() => {
-      current.toggleDevice('desktop-1');
+      current.toggleTarget('desktop-1');
     });
 
     await act(async () => {
@@ -398,7 +487,7 @@ describe('useShareSendController', () => {
     renderHarness(jest.fn());
     await settle();
     act(() => {
-      current.toggleDevice('laptop-1');
+      current.toggleTarget('laptop-1');
     });
 
     await act(async () => {
@@ -415,7 +504,7 @@ describe('useShareSendController', () => {
     renderHarness(jest.fn());
     await settle();
     act(() => {
-      current.toggleDevice('desktop-1');
+      current.toggleTarget('desktop-1');
     });
 
     await act(async () => {

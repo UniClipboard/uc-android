@@ -7,8 +7,8 @@ function loadAdapter():
       refresh(policy: unknown): Promise<void>;
       handleAppStateChange(policy: unknown): void;
       synchronize(): Promise<void>;
-      sendImportedText(text: string, profileHash: string): Promise<unknown>;
-      sendImportedAsset(asset: unknown, profileHash: string): Promise<unknown>;
+      sendImportedText(text: string, profileHash: string, options?: unknown): Promise<unknown>;
+      sendImportedAsset(asset: unknown, profileHash: string, options?: unknown): Promise<unknown>;
       observeClipboardChange(content: unknown, dispatch: boolean): Promise<unknown>;
       subscribe(listener: (event: unknown) => void): () => void;
     })
@@ -44,7 +44,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => activeServer,
+      getServer: async () => activeServer,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -86,7 +86,7 @@ describe('LanSyncAdapter', () => {
       putClipboard: jest.fn(async () => ({ url: profile.urls[0] })),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent,
       preparePayloadTempUri: jest.fn(),
@@ -119,7 +119,7 @@ describe('LanSyncAdapter', () => {
       putClipboard: jest.fn(async () => ({ url: profile.urls[0] })),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -164,6 +164,129 @@ describe('LanSyncAdapter', () => {
     await adapter.stop();
   });
 
+  it('sends imported text to every selected LAN server', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const office = {
+      ...profile,
+      name: 'Office',
+      urls: ['http://office.local:42720'],
+    };
+    const getServer = jest.fn(async (serverId?: string) =>
+      serverId === 'office' ? office : profile
+    );
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async () => ({ url: profile.urls[0] })),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer,
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+    client.putClipboard.mockClear();
+
+    await expect(
+      adapter.sendImportedText('shared text', 'SHARED_HASH', {
+        targetIds: ['home', 'office'],
+      })
+    ).resolves.toEqual({
+      success: true,
+      state: 'delivered',
+      counts: { accepted: 2, duplicate: 0, offline: 0, errored: 0, pending: 0 },
+    });
+    expect(getServer).toHaveBeenCalledWith('home');
+    expect(getServer).toHaveBeenCalledWith('office');
+    expect(client.putClipboard).toHaveBeenCalledTimes(2);
+    expect(client.putClipboard).toHaveBeenNthCalledWith(1, profile, expect.any(Object));
+    expect(client.putClipboard).toHaveBeenNthCalledWith(2, office, expect.any(Object));
+    await adapter.stop();
+  });
+
+  it('reports partial delivery when one selected LAN server fails', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const office = {
+      ...profile,
+      name: 'Office',
+      urls: ['http://office.local:42720'],
+    };
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async (server: typeof profile) => {
+        if (server.name === 'Office') throw new Error('offline');
+        return { url: server.urls[0] };
+      }),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer: async (serverId?: string) => (serverId === 'office' ? office : profile),
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+
+    await expect(
+      adapter.sendImportedText('shared text', 'SHARED_HASH', {
+        targetIds: ['home', 'office'],
+      })
+    ).resolves.toEqual({
+      success: true,
+      state: 'partial',
+      counts: { accepted: 1, duplicate: 0, offline: 0, errored: 1, pending: 0 },
+    });
+    await adapter.stop();
+  });
+
+  it('reports failed delivery when every selected LAN server fails', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async () => {
+        throw new Error('failed');
+      }),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer: async () => profile,
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+
+    await expect(
+      adapter.sendImportedText('shared text', 'SHARED_HASH', {
+        targetIds: ['home', 'office'],
+      })
+    ).resolves.toEqual({
+      success: false,
+      state: 'failed',
+      counts: { accepted: 0, duplicate: 0, offline: 0, errored: 2, pending: 0 },
+    });
+    await adapter.stop();
+  });
+
   it('uploads long text as UTF-8 payload and counts grapheme clusters', async () => {
     const LanSyncAdapter = loadAdapter();
     expect(LanSyncAdapter).toBeDefined();
@@ -174,7 +297,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -224,7 +347,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -271,7 +394,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -344,7 +467,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(async () => 'file:///cache/REMOTE_IMAGE-image.jpg'),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent,
       preparePayloadTempUri,
@@ -392,7 +515,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -436,7 +559,7 @@ describe('LanSyncAdapter', () => {
       downloadPayload: jest.fn(),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -486,7 +609,7 @@ describe('LanSyncAdapter', () => {
       }),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -536,7 +659,7 @@ describe('LanSyncAdapter', () => {
       ),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -580,7 +703,7 @@ describe('LanSyncAdapter', () => {
       }),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -627,7 +750,7 @@ describe('LanSyncAdapter', () => {
       }),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -680,7 +803,7 @@ describe('LanSyncAdapter', () => {
       ),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => activeServer,
+      getServer: async () => activeServer,
       readClipboard: async () => null,
       applyRemoteContent: async () => undefined,
       preparePayloadTempUri: jest.fn(),
@@ -739,7 +862,7 @@ describe('LanSyncAdapter', () => {
       }),
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => profile,
+      getServer: async () => profile,
       readClipboard: async () => null,
       applyRemoteContent,
       preparePayloadTempUri: jest.fn(),

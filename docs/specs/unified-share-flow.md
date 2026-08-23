@@ -13,7 +13,7 @@
 | 接收端            | iOS 分享扩展 / Android 分享 intent 接收器,只负责「提取 + 暂存」 |
 | PendingShareStore | 跨平台暂存队列抽象(claim/complete/release/stage)                |
 | Job               | 队列中一条待发送分享,含内容元数据与 payload 文件引用            |
-| 分享页            | 主应用内 RN 页面 `ShareSendScreen`,预览内容 + 选设备 + 发送     |
+| 分享页            | 主应用内 RN 页面 `ShareSendScreen`,预览内容 + 选目标 + 发送     |
 | Payload           | job 对应的内容文件(文本为 UTF-8 文件,图片/文件为原始字节)       |
 
 ---
@@ -37,10 +37,10 @@ Android:
               主应用入口(App.tsx / AppNavigator)
                          │  claimPending()
                          ▼
-              ShareSendScreen(双端同一 RN 页面)
+              ShareSendScreen(双端平台原生页面)
                ├─ 内容预览(文本/图片/文件卡片)
-               ├─ 设备列表(useUnifiedSpaceStore,实时在线状态)
-               └─ 发送 → UnifiedContentService + 历史落库
+               ├─ 按同步方式列出可选目标(LAN 服务器 / P2P 设备)
+               └─ 发送 → UnifiedSyncRuntime + 历史落库
                     → completeJob / releaseJob / 丢弃
 ```
 
@@ -318,28 +318,28 @@ type Phase =
 | image | `Image` 组件加载 `fileUri` 缩略图(64–96pt),附 `displayName` / `byteCount` |
 | file  | 图标 + `displayName` + `mimeType` + `byteCount`(`formatBytes`)            |
 
-### 8.4 设备列表
+### 8.4 发送目标
 
-- 数据源:`useUnifiedSpaceStore`(设备名、`online`、`isLocal`)。
-- 挂载时 `getUnifiedSpaceService().refreshDevices()` 刷新一次;刷新失败沿用
-  现有快照(状态仍显示,不做失败阻断)。
-- 行渲染:`isLocal` 置灰禁用或隐藏;在线绿色圆点 + "在线",离线灰点 + "离线"
-  (文案沿用 `space.devices.online/offline` 现有 i18n key)。
-- 多选:`Set<deviceId>`;为空时发送按钮禁用。
+- 当前同步方式是 P2P 时,数据源为 `useUnifiedSpaceStore`;隐藏本机,只显示空间内
+  的其他设备。挂载时刷新一次设备快照,失败时沿用现有快照。
+- 当前同步方式是 LAN 时,检查全部已配置服务器,只显示至少一个地址检查成功的
+  服务器;行内显示服务器名称和首选地址。
+- 两种方式互不混合也不互相兜底。目标均支持多选;未选目标时发送按钮禁用。
+- 只有一个可用目标时自动选中。
 - 平台差异只落在组件层(iOS `@expo/ui/swift-ui` + `lucide-react-native`,
   Android Compose + Ionicons),逻辑全在 controller。
 
 ### 8.5 发送流程(每个 job)
 
 ```text
-选中设备 → 发送
+选中当前同步方式的目标 → 发送
   ├─ kind=text   → importTextToHistory(text) → sendImportedText(text, profileHash)
   ├─ kind=image  → importFileToHistory(fileUri, displayName, mime, byteCount)
   │                 → sendImportedAsset({kind:'image', uri, fileName, mimeType},
-  │                                     profileHash, { targetDeviceIds })
+  │                                     profileHash, { targetIds })
   └─ kind=file   → importFileToHistory(..., { skipInitialCopyOnIOS: true })
                     → sendImportedAsset({kind:'file', uri: 历史落库后的 fileUri, ...},
-                                        profileHash, { targetDeviceIds })
+                                        profileHash, { targetIds })
 
 投递状态(deliveryState):
   delivered / partial → completeJob(id) → 标记成功
@@ -349,7 +349,8 @@ type Phase =
 - 发送按 job 顺序串行,每项独立展示状态(进行中/成功/失败)。
 - 失败时该 job 不自动重试;界面提供「重试」与「删除」(丢弃=`completeJob` 后
   连同 payload 清除;「删除」= `discardStagedFile` 语义,见 §8.6)。
-- 发送结束后停留在页面直到用户点「完成」返回 Home(不自动 dismiss)。
+- P2P 将 `targetIds` 解释为设备 ID;LAN 将其解释为服务器 ID 并逐台发送。LAN
+  只有部分服务器成功时返回 `partial`,job 保留以供重试。
 
 ### 8.6 取消 / 丢弃语义(收敛 PRD Q3)
 
@@ -443,12 +444,12 @@ Android:
 
 6. 相册图片、文件管理器文件、浏览器文本分享 → 进分享页,预览正确,不再自动
    返回来源应用。
-7. 分享页选设备发送成功;历史出现条目;`pending-share/` 目录清空。
+7. 分享页按当前同步方式选择目标并发送成功;历史出现条目;`pending-share/` 目录清空。
 8. 双开(重复分享 intent)不产生重复 job。
 
 双端:
 
-9. 设备列表实时状态与空间页一致;本机不可选;未选设备发送禁用。
+9. P2P 只显示远端设备;LAN 只显示可用服务器并支持多选;未选目标发送禁用。
 
 ---
 
@@ -459,7 +460,7 @@ Android:
 | A    | Job 模型加 `kind`(Swift + DTO + 解码兼容);JS `PendingShareStore` 抽象 + Android 实现 + iOS 委托 | 新接口带测试,现有行为不变           |
 | B    | Android 哑接收:redirector 替换自动发送;分享页可打开空态                                         | Android 分享进入分享页,不再自动发送 |
 | C    | iOS 哑扩展:ShareViewController 重写、删除 SwiftUI/P2P、openURL 接线                             | 分享 → 主应用自动打开分享页         |
-| D    | 分享页完整实现(预览/设备/发送/取消/删除),`OutboundShareHandoffManager` 改造                     | §8 全部行为可用,AC 全过             |
+| D    | 分享页完整实现(预览/目标/发送/取消/删除),`OutboundShareHandoffManager` 改造                     | §8 全部行为可用,AC 全过             |
 | E    | 清理:删除遗留文件与旧测试,诊断字段补齐,全量质量门禁 + 真机验收                                  | `check:ci` + 双端真机通过           |
 
 每个阶段保持可编译可运行、可单独提交回退;阶段 A/B 不改变 iOS 现状行为。

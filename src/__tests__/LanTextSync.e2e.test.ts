@@ -55,7 +55,7 @@ describe('LAN text sync end to end', () => {
     const desktop = await startDesktopFixture();
     const applyRemoteContent = jest.fn(async () => undefined);
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => ({
+      getServer: async () => ({
         name: 'Desktop',
         urls: [desktop.url],
         username: 'mobile',

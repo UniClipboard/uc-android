@@ -27,6 +27,8 @@
     "claimFailed": "加载待发送内容失败，请稍后重试",
     "devices": "发送到设备",
     "noDevices": "暂无设备",
+    "servers": "发送到服务器",
+    "noServers": "暂无可用服务器",
     "sendAll": "发送",
     "done": "完成",
     "cancel": "取消",

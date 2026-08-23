@@ -115,7 +115,7 @@ describe('LAN payload sync end to end', () => {
       allowInsecureTls: false,
     };
     const adapter = new LanSyncAdapter({
-      getActiveServer: async () => server,
+      getServer: async () => server,
       readClipboard: async () => ({ type: 'Text', profileHash: 'INITIAL_HASH' }),
       applyRemoteContent,
       preparePayloadTempUri: (profileHash, dataName) => `file:///cache/${profileHash}-${dataName}`,

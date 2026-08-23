@@ -14,10 +14,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/useTheme';
 import type { ColorScheme } from '@/theme/colors.types';
-import type { UnifiedSpaceDevice } from '@/features/space';
 import { useShareSheetStore } from '@/stores/shareSheetStore';
 import type { ShareSendSheetProps } from './ShareSendSheet.types';
-import { useShareSendController, formatBytes, type ShareJobView } from './useShareSendController';
+import {
+  useShareSendController,
+  formatBytes,
+  type ShareJobView,
+  type ShareTarget,
+} from './useShareSendController';
 
 /** Android 外部分享独立页面。解析与发送都在同一全屏页面完成。 */
 export function ShareSendSheet({ visible, onClose }: ShareSendSheetProps) {
@@ -143,13 +147,14 @@ function ShareBody({
               theme={theme}
               label={`${t('send.title')} (${c.jobViews.length})`}
             />
-            <DeviceSection
-              devices={c.devices}
-              selectedDeviceIds={c.selectedDeviceIds}
-              onToggle={c.toggleDevice}
+            <TargetSection
+              targets={c.targets}
+              selectedTargetIds={c.selectedTargetIds}
+              onToggle={c.toggleTarget}
               theme={theme}
-              label={t('send.devices')}
-              emptyLabel={t('send.noDevices')}
+              label={t(c.targetKind === 'server' ? 'send.servers' : 'send.devices')}
+              emptyLabel={t(c.targetKind === 'server' ? 'send.noServers' : 'send.noDevices')}
+              isLoading={c.isLoadingTargets}
             />
           </>
         )}
@@ -230,32 +235,36 @@ function ContentSection({
   );
 }
 
-function DeviceSection({
-  devices,
-  selectedDeviceIds,
+function TargetSection({
+  targets,
+  selectedTargetIds,
   onToggle,
   theme,
   label,
   emptyLabel,
+  isLoading,
 }: {
-  devices: UnifiedSpaceDevice[];
-  selectedDeviceIds: Set<string>;
-  onToggle: (deviceId: string) => void;
+  targets: ShareTarget[];
+  selectedTargetIds: Set<string>;
+  onToggle: (targetId: string) => void;
   theme: ColorScheme;
   label: string;
   emptyLabel: string;
+  isLoading: boolean;
 }) {
   return (
     <>
       <SectionLabel theme={theme} label={label} />
-      {devices.length === 0 ? (
-        <Text style={[styles.noDevices, { color: theme.textSecondary }]}>{emptyLabel}</Text>
+      {isLoading ? (
+        <ActivityIndicator color={theme.accent} style={styles.targetLoading} />
+      ) : targets.length === 0 ? (
+        <Text style={[styles.noTargets, { color: theme.textSecondary }]}>{emptyLabel}</Text>
       ) : (
-        devices.map((device) => (
-          <DeviceRow
-            key={device.deviceId}
-            device={device}
-            selected={selectedDeviceIds.has(device.deviceId)}
+        targets.map((target) => (
+          <TargetRow
+            key={target.id}
+            target={target}
+            selected={selectedTargetIds.has(target.id)}
             onToggle={onToggle}
             theme={theme}
           />
@@ -307,23 +316,23 @@ function JobCard({ view, theme }: { view: ShareJobView; theme: ColorScheme }) {
   );
 }
 
-function DeviceRow({
-  device,
+function TargetRow({
+  target,
   selected,
   onToggle,
   theme,
 }: {
-  device: UnifiedSpaceDevice;
+  target: ShareTarget;
   selected: boolean;
-  onToggle: (deviceId: string) => void;
+  onToggle: (targetId: string) => void;
   theme: ColorScheme;
 }) {
   return (
     <Pressable
-      onPress={() => onToggle(device.deviceId)}
+      onPress={() => onToggle(target.id)}
       style={[
-        styles.deviceRow,
-        selected && styles.deviceRowSelected,
+        styles.targetRow,
+        selected && styles.targetRowSelected,
         {
           backgroundColor: selected ? theme.accentContainer : theme.surfaceHigh,
           borderColor: selected ? theme.accent : theme.separator,
@@ -332,9 +341,16 @@ function DeviceRow({
       accessibilityRole="button"
       accessibilityState={{ selected }}
     >
-      <Text style={[styles.deviceName, { color: theme.textPrimary }]} numberOfLines={1}>
-        {device.displayName}
-      </Text>
+      <View style={styles.targetText}>
+        <Text style={[styles.targetName, { color: theme.textPrimary }]} numberOfLines={1}>
+          {target.displayName}
+        </Text>
+        {target.detail ? (
+          <Text style={[styles.targetDetail, { color: theme.textSecondary }]} numberOfLines={1}>
+            {target.detail}
+          </Text>
+        ) : null}
+      </View>
       <Ionicons
         name={selected ? 'checkbox' : 'square-outline'}
         size={23}
@@ -383,8 +399,9 @@ const styles = StyleSheet.create({
   cardMeta: { flex: 1, gap: 4 },
   cardName: { fontSize: 15, fontWeight: '500' },
   cardDetail: { fontSize: 12 },
-  noDevices: { fontSize: 14, textAlign: 'center', paddingVertical: 20 },
-  deviceRow: {
+  noTargets: { fontSize: 14, textAlign: 'center', paddingVertical: 20 },
+  targetLoading: { paddingVertical: 20 },
+  targetRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -393,8 +410,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 58,
   },
-  deviceRowSelected: { borderWidth: 2 },
-  deviceName: { flex: 1, fontSize: 15 },
+  targetRowSelected: { borderWidth: 2 },
+  targetText: { flex: 1, gap: 2 },
+  targetName: { fontSize: 15 },
+  targetDetail: { fontSize: 12 },
   footer: { borderTopWidth: StyleSheet.hairlineWidth, padding: 16 },
   sendButton: {
     minHeight: 52,
