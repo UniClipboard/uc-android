@@ -103,12 +103,15 @@ describe('shared Space device detail UI', () => {
   });
 
   it('keeps the iOS detail sheet in the existing SwiftUI host to avoid parent-page flashes', () => {
-    const homeSheet = source('components/MySpaceSheet.ios.tsx');
+    const homeLayout = source('components/MySpaceLayout.ios.tsx');
+    const p2pContent = source('components/P2pMySpaceContent.ios.tsx');
     const settings = source('screens/SettingsScreen.ios.tsx');
     const spacePage = source('screens/settings/ios/SpacePage.tsx');
-    const host = homeSheet.match(/<Host[\s\S]*?<\/Host>/)?.[0];
+    const host = homeLayout.match(/<Host[\s\S]*?<\/Host>/)?.[0];
 
-    expect(host).toContain('<SpaceDeviceDetail');
+    expect(host).toContain('{supplementary}');
+    expect(p2pContent).toContain('<SpaceDeviceDetail');
+    expect(p2pContent).toContain('supplementary={deviceDetail}');
     expect(settings).toContain('useSpaceDeviceManagement({ allowHighImpactActions: true })');
     expect(settings).toContain('<SpaceDeviceDetail');
     expect(spacePage).not.toContain('<SpaceDeviceDetail');

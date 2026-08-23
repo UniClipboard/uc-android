@@ -86,6 +86,7 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
     visible: props.visible,
     serverId: props.serverId,
     initialIntent: props.initialIntent,
+    selectAfterSave: props.selectAfterSave,
     onFinished: props.onClose,
   });
   const handleScan = useCallback(async () => {
@@ -105,22 +106,16 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
       Alert.alert(t('lan.qr.failedTitle'), t('lan.qr.errors.PAYLOAD_DECODE_FAILED'));
     }
   }, [editor.applyIntent, t]);
-  return (
-    <Group>
-      <BottomSheet
-        isPresented={props.visible}
-        onIsPresentedChange={(presented) => {
-          if (!presented) props.onClose();
-        }}
-      >
-        <Group modifiers={[presentationDetents(['large']), presentationDragIndicator('visible')]}>
-          <IosSheetPage
+  const page = (
+    <IosSheetPage
             title={props.serverId ? t('lan.edit') : t('lan.add')}
             leftSlots={[
               <HeaderCircleButton
-                key="close"
-                systemName="xmark"
-                accessibilityLabel={t('action.cancel', { ns: 'common' })}
+                key="navigation"
+                systemName={props.embedded ? 'chevron.left' : 'xmark'}
+                accessibilityLabel={t(props.embedded ? 'action.back' : 'action.cancel', {
+                  ns: 'common',
+                })}
                 onPress={props.onClose}
               />,
             ]}
@@ -282,7 +277,19 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
                 ) : null}
               </Section>
             </IosSheetForm>
-          </IosSheetPage>
+    </IosSheetPage>
+  );
+  if (props.embedded) return page;
+  return (
+    <Group>
+      <BottomSheet
+        isPresented={props.visible}
+        onIsPresentedChange={(presented) => {
+          if (!presented) props.onClose();
+        }}
+      >
+        <Group modifiers={[presentationDetents(['large']), presentationDragIndicator('visible')]}>
+          {page}
         </Group>
       </BottomSheet>
     </Group>

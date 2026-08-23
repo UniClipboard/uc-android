@@ -9,6 +9,7 @@ export interface UseLanServerEditorOptions {
   visible: boolean;
   serverId: string | null;
   initialIntent?: LanConnectIntent | null;
+  selectAfterSave?: boolean;
   onFinished(): void;
 }
 
@@ -16,6 +17,7 @@ export function useLanServerEditor({
   visible,
   serverId,
   initialIntent,
+  selectAfterSave = false,
   onFinished,
 }: UseLanServerEditorOptions) {
   const activeServerId = useSettingsStore((state) => state.config?.activeLanServerId ?? null);
@@ -118,10 +120,13 @@ export function useLanServerEditor({
     setPending(true);
     setError(null);
     try {
-      await getLanServerService().save(
+      const saved = await getLanServerService().save(
         { name, urls, username, password, allowInsecureTls },
         serverId ?? undefined
       );
+      if (!serverId && selectAfterSave) {
+        await getLanServerService().select(saved.id);
+      }
       await loadConfig();
       onFinished();
     } catch (caught) {
@@ -129,7 +134,17 @@ export function useLanServerEditor({
     } finally {
       setPending(false);
     }
-  }, [allowInsecureTls, loadConfig, name, onFinished, password, serverId, urls, username]);
+  }, [
+    allowInsecureTls,
+    loadConfig,
+    name,
+    onFinished,
+    password,
+    selectAfterSave,
+    serverId,
+    urls,
+    username,
+  ]);
 
   const remove = useCallback(async () => {
     if (!serverId) return;

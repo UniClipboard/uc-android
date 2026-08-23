@@ -69,7 +69,7 @@ describe('LAN server UI ownership', () => {
     expect(editor).toContain('onTextChange={handleTextChange}');
     expect(editor).toContain("t('lan.probe.test')");
     expect(editor).toContain('editor.probeResults');
-    expect(editor).toContain('systemName="xmark"');
+    expect(editor).toContain("props.embedded ? 'chevron.left' : 'xmark'");
     expect(editor).toContain('systemName="checkmark"');
     expect(editor).toContain('disabled={editor.pending || !editor.canSave}');
     expect(editor).not.toContain("<Button label={t('action.cancel', { ns: 'common' })}");
@@ -77,13 +77,15 @@ describe('LAN server UI ownership', () => {
 
   it('uses full-width Android list rows and a screen-owned editor sheet', () => {
     const page = source('src/screens/settings/LanServersPage.android.tsx');
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
 
     expect(page).toContain('ListItem modifiers={[clickable(');
-    expect(page).toContain('<ModalBottomSheet');
+    expect(page).toContain('<LanServerEditorSheet');
     expect(page).toContain('usePendingLanConnectStore');
-    expect(page).toContain('verticalScroll()');
-    expect(page).toContain("t('lan.probe.test')");
-    expect(page).toContain('editor.probeResults');
+    expect(editor).toContain('<ModalBottomSheet');
+    expect(editor).toContain('verticalScroll()');
+    expect(editor).toContain("t('lan.probe.test')");
+    expect(editor).toContain('editor.probeResults');
   });
 
   it('wraps Android text-field labels and placeholders in Compose text', () => {

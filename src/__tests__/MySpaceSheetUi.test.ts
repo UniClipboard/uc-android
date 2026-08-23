@@ -11,8 +11,11 @@ const homeController = read('screens/useHomeController.ts');
 const homeOverlays = read('screens/HomeOverlays.tsx');
 const topBarTypes = read('components/HomeTopBar.types.ts');
 const topBars = ['android', 'ios'].map((platform) => read(`components/HomeTopBar.${platform}.tsx`));
-const mySpaceSheets = ['android', 'ios'].map((platform) =>
-  read(`components/MySpaceSheet.${platform}.tsx`)
+const mySpaceLayouts = ['android', 'ios'].map((platform) =>
+  read(`components/MySpaceLayout.${platform}.tsx`)
+);
+const p2pMySpaceContents = ['android', 'ios'].map((platform) =>
+  read(`components/P2pMySpaceContent.${platform}.tsx`)
 );
 const mySpaceSheetTypes = read('components/MySpaceSheet.types.ts');
 const mySpaceSheetHook = read('components/useMySpaceSheet.ts');
@@ -71,15 +74,15 @@ describe('home My Space sheet', () => {
     expect(mySpaceSheetTypes).toContain('onClose: () => void');
     expect(read('components/MySpaceSheet.tsx')).toContain("export * from './MySpaceSheet.android'");
 
-    expect(mySpaceSheets[0]).toContain('<AppBottomSheet');
-    expect(mySpaceSheets[0]).not.toContain('ModalBottomSheet');
-    expect(mySpaceSheets[0]).toContain('LazyColumn');
-    expect(mySpaceSheets[1]).toContain('BottomSheet');
-    expect(mySpaceSheets[1]).toContain('List');
+    expect(mySpaceLayouts[0]).toContain('<AppBottomSheet');
+    expect(mySpaceLayouts[0]).not.toContain('ModalBottomSheet');
+    expect(mySpaceLayouts[0]).toContain('LazyColumn');
+    expect(mySpaceLayouts[1]).toContain('BottomSheet');
+    expect(mySpaceLayouts[1]).toContain('List');
   });
 
   it('prioritizes Engine trust state while retaining online and offline fallback', () => {
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).toContain('device.displayName');
       expect(sheet).toContain("'space.devices.online'");
       expect(sheet).toContain("'space.devices.offline'");
@@ -91,7 +94,7 @@ describe('home My Space sheet', () => {
   });
 
   it('opens the shared read-only device detail', () => {
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).toContain('<SpaceDeviceDetail');
       expect(sheet).toContain('deviceManagement.openDevice');
       expect(sheet).toContain('canRemove={deviceManagement.canRemoveSelected}');
@@ -100,40 +103,40 @@ describe('home My Space sheet', () => {
   });
 
   it('starts with the device list instead of a space overview card', () => {
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).not.toContain('space.overview.status');
       expect(sheet).not.toContain('space.overview.memberCount');
       expect(sheet).not.toContain('deviceManagement.overview.primaryStatus');
       expect(sheet).toContain('space.deviceTrust.status.${device.primaryStatus}');
     }
 
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).not.toContain('space.devices.title');
     }
   });
 
   it('does not reserve an empty Android row where the device section label was', () => {
-    expect(mySpaceSheets[0]).not.toContain('SECTION_TITLE_STYLE');
-    expect(mySpaceSheets[0]).not.toContain('pairedHeight + 44');
+    expect(p2pMySpaceContents[0]).not.toContain('SECTION_TITLE_STYLE');
+    expect(p2pMySpaceContents[0]).not.toContain('pairedHeight + 44');
   });
 
   it('uses the Android theme foreground color for the My Space title', () => {
-    expect(mySpaceSheets[0]).toContain(
+    expect(mySpaceLayouts[0]).toContain(
       '<ComposeText style={TITLE_STYLE} color={colors.onSurface}>'
     );
   });
 
   it('groups Android device entries in a rounded list with dividers', () => {
-    expect(mySpaceSheets[0]).toContain('function SpaceDeviceRow');
-    expect(mySpaceSheets[0]).toContain('<Surface');
-    expect(mySpaceSheets[0]).toContain('const DEVICE_LIST_SHAPE = Shape.RoundedCorner');
-    expect(mySpaceSheets[0]).toContain('shape={DEVICE_LIST_SHAPE}');
-    expect(mySpaceSheets[0]).toContain('<HorizontalDivider');
-    expect(mySpaceSheets[0]).toContain('border={{ color: colors.outlineVariant }}');
+    expect(p2pMySpaceContents[0]).toContain('function SpaceDeviceRow');
+    expect(p2pMySpaceContents[0]).toContain('<Surface');
+    expect(p2pMySpaceContents[0]).toContain('const DEVICE_LIST_SHAPE = Shape.RoundedCorner');
+    expect(p2pMySpaceContents[0]).toContain('shape={DEVICE_LIST_SHAPE}');
+    expect(p2pMySpaceContents[0]).toContain('<HorizontalDivider');
+    expect(p2pMySpaceContents[0]).toContain('border={{ color: colors.outlineVariant }}');
   });
 
   it('draws Android device dividers at one consistent color across the full row', () => {
-    const androidDivider = mySpaceSheets[0].match(/<HorizontalDivider[\s\S]*?\/>/)?.[0];
+    const androidDivider = p2pMySpaceContents[0].match(/<HorizontalDivider[\s\S]*?\/>/)?.[0];
 
     expect(androidDivider).toBeDefined();
     expect(androidDivider).toContain('modifiers={[fillMaxWidth()]}');
@@ -141,11 +144,11 @@ describe('home My Space sheet', () => {
   });
 
   it('does not show avatar icons in device rows', () => {
-    const androidDeviceRow = mySpaceSheets[0].match(
-      /function SpaceDeviceRow[\s\S]*?\n}\n\nfunction MySpaceSheetContent/
+    const androidDeviceRow = p2pMySpaceContents[0].match(
+      /function SpaceDeviceRow[\s\S]*?\n}\n\nexport function P2pMySpaceContent/
     )?.[0];
-    const iosDeviceRow = mySpaceSheets[1].match(
-      /function SpaceDeviceRow[\s\S]*?\n}\n\nexport function MySpaceSheet/
+    const iosDeviceRow = p2pMySpaceContents[1].match(
+      /function SpaceDeviceRow[\s\S]*?\n}\n\nexport function P2pMySpaceContent/
     )?.[0];
 
     expect(androidDeviceRow).toBeDefined();
@@ -166,15 +169,15 @@ describe('home My Space sheet', () => {
   });
 
   it('uses native pull-to-refresh on both platforms bound only to user requests', () => {
-    expect(mySpaceSheets[0]).toContain('PullToRefreshBox');
-    expect(mySpaceSheets[0]).toContain('isRefreshing={isUserRefreshing}');
-    expect(mySpaceSheets[0]).toContain('onRefresh');
-    expect(mySpaceSheets[1]).toContain('refreshable(');
-    expect(mySpaceSheets[1]).toContain('refreshable(() => refresh())');
+    expect(mySpaceLayouts[0]).toContain('PullToRefreshBox');
+    expect(p2pMySpaceContents[0]).toContain('isRefreshing={isUserRefreshing}');
+    expect(p2pMySpaceContents[0]).toContain('onRefresh={refresh}');
+    expect(mySpaceLayouts[1]).toContain('refreshable(');
+    expect(p2pMySpaceContents[1]).toContain('onRefresh={refresh}');
   });
 
   it('keeps loading, error, empty, and row states mutually exclusive on both platforms', () => {
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).toContain('isInitialLoading');
       expect(sheet).toContain('isInitialFailed');
       expect(sheet).toContain('deviceListFailed');
@@ -185,12 +188,12 @@ describe('home My Space sheet', () => {
   });
 
   it('uses the header plus action to create an invitation inside the sheet', () => {
-    expect(mySpaceSheets[0]).toContain('ICONS.add');
-    expect(mySpaceSheets[0]).not.toContain('ICONS.close');
-    expect(mySpaceSheets[1]).toContain('systemName="plus"');
-    expect(mySpaceSheets[1]).not.toContain('systemName="xmark"');
+    expect(mySpaceLayouts[0]).toContain('ADD_ICON');
+    expect(mySpaceLayouts[0]).not.toContain('ICONS.close');
+    expect(mySpaceLayouts[1]).toContain('systemName="plus"');
+    expect(mySpaceLayouts[1]).not.toContain('systemName="xmark"');
 
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).toContain('issueInvitation');
       expect(sheet).toContain("'space.invitation.pairingInstructions'");
       expect(sheet).toContain('invitation.invitationCode');
@@ -202,58 +205,51 @@ describe('home My Space sheet', () => {
   });
 
   it('uses the adaptive iOS accent for invitation actions instead of the device color', () => {
-    expect(mySpaceSheets[1]).toContain('color={iosAccentColor}');
-    expect(mySpaceSheets[1]).toContain('iosProminentButtonModifiers(undefined,');
-    expect(mySpaceSheets[1]).not.toContain('DEVICE_COLOR');
-    expect(mySpaceSheets[1]).not.toContain('iosSaturatedButtonPalette');
+    expect(mySpaceLayouts[1]).toContain('color={iosAccentColor}');
+    expect(p2pMySpaceContents[1]).toContain('iosProminentButtonModifiers(undefined,');
+    expect(p2pMySpaceContents[1]).not.toContain('DEVICE_COLOR');
+    expect(p2pMySpaceContents[1]).not.toContain('iosSaturatedButtonPalette');
   });
 
   it('disables the add action while a decision or another space operation is active', () => {
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).toContain('canIssueInvitation');
     }
-    expect(mySpaceSheets[0]).toContain('enabled={canIssueInvitation}');
-    expect(mySpaceSheets[1]).toContain('enabled={canIssueInvitation}');
+    expect(p2pMySpaceContents[0]).toContain('actionEnabled={canIssueInvitation}');
+    expect(p2pMySpaceContents[1]).toContain('actionEnabled={canIssueInvitation}');
   });
 
   it('shows invitation progress only in the header action', () => {
-    expect(mySpaceSheets[0]).toContain('invitationPending ?');
-    expect(mySpaceSheets[0]).toContain('<CircularProgressIndicator');
-    expect(mySpaceSheets[0]).toContain(
+    expect(mySpaceLayouts[0]).toContain('actionPending ?');
+    expect(mySpaceLayouts[0]).toContain('<CircularProgressIndicator');
+    expect(p2pMySpaceContents[0]).toContain(
       'const invitationHeight = invitation ? 248 : invitationError ? 72 : 0;'
     );
-    expect(mySpaceSheets[0]).not.toContain('invitationPending || invitationError');
-    expect(mySpaceSheets[1]).toContain('pending ?');
-    expect(mySpaceSheets[1]).toContain('<ProgressView modifiers={[padding()]} />');
+    expect(p2pMySpaceContents[0]).not.toContain('invitationPending || invitationError');
+    expect(mySpaceLayouts[1]).toContain('actionPending ?');
+    expect(mySpaceLayouts[1]).toContain('<ProgressView modifiers={[padding()]} />');
 
-    for (const sheet of mySpaceSheets) {
+    for (const sheet of p2pMySpaceContents) {
       expect(sheet).not.toContain('invitationPending && !invitation');
       expect(sheet).not.toContain("t('space.working'");
     }
   });
 
   it('animates Android sheet height changes when invitation content appears', () => {
-    expect(mySpaceSheets[0]).toContain('animateContentSize');
-    expect(mySpaceSheets[0]).toContain(
+    expect(mySpaceLayouts[0]).toContain('animateContentSize');
+    expect(mySpaceLayouts[0]).toContain(
       '<Column modifiers={[fillMaxWidth(), animateContentSize()]}'
     );
   });
 
   it('keeps the iOS sheet at half height while loading and expands when the invitation appears', () => {
-    expect(mySpaceSheets[1]).toContain("useState<PresentationDetent>('medium')");
-    expect(mySpaceSheets[1]).toContain("if (!visible) setSheetDetent('medium')");
-    expect(mySpaceSheets[1]).toContain("if (invitation) setSheetDetent('large')");
-    expect(mySpaceSheets[1]).toContain(
-      "const presentedSheetDetent = invitation ? 'large' : sheetDetent"
-    );
-    expect(mySpaceSheets[1]).toContain('selection: presentedSheetDetent');
-    expect(mySpaceSheets[1]).toContain('onSelectionChange: setSheetDetent');
-
-    const issueHandler = mySpaceSheets[1].match(
-      /const handleIssueInvitation = \(\) => \{[\s\S]*?\n  \};/
-    )?.[0];
-    expect(issueHandler).toBeDefined();
-    expect(issueHandler).not.toContain("setSheetDetent('large')");
+    expect(mySpaceLayouts[1]).toContain("useState<PresentationDetent>('medium')");
+    expect(mySpaceLayouts[1]).toContain("if (!visible) setSheetDetent('medium')");
+    expect(mySpaceLayouts[1]).toContain("if (prefersLarge) setSheetDetent('large')");
+    expect(mySpaceLayouts[1]).toContain("selection: prefersLarge ? 'large' : sheetDetent");
+    expect(mySpaceLayouts[1]).toContain('onSelectionChange: setSheetDetent');
+    expect(p2pMySpaceContents[1]).toContain('prefersLarge={Boolean(invitation)}');
+    expect(p2pMySpaceContents[1]).not.toContain("setSheetDetent('large')");
   });
 
   it('localizes the invitation guidance and header action in every supported language', () => {
@@ -269,8 +265,8 @@ describe('home My Space sheet', () => {
   });
 
   it('uses the space translations by default for Android invitation content', () => {
-    expect(mySpaceSheets[0]).toMatch(
-      /function MySpaceSheetContent[\s\S]*?const \{ t \} = useTranslation\('settingsSync'\)/
+    expect(p2pMySpaceContents[0]).toMatch(
+      /function P2pMySpaceContent[\s\S]*?const \{ t \} = useTranslation\('settingsSync'\)/
     );
   });
 });
