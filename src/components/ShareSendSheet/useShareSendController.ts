@@ -122,6 +122,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
   const [phase, setPhase] = useState<Phase>({ kind: 'claiming' });
   const [jobViews, setJobViews] = useState<ShareJobView[]>([]);
   const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(new Set());
+  const [isRefreshingP2pTargets, setIsRefreshingP2pTargets] = useState(false);
   const sendingRef = useRef(false);
   const hasAppliedDefaultSelectionRef = useRef(false);
   const successCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -341,6 +342,19 @@ export function useShareSendController(onClose: () => void, active: boolean) {
     });
   }, []);
 
+  const refreshTargets = useCallback(async () => {
+    if (syncChannel === 'lan') {
+      await lan.refresh();
+      return;
+    }
+    setIsRefreshingP2pTargets(true);
+    try {
+      await getUnifiedSpaceService().refreshDevices();
+    } finally {
+      setIsRefreshingP2pTargets(false);
+    }
+  }, [lan.refresh, syncChannel]);
+
   // 取消 / 完成:内容已保存,未发送 job 直接出队,返回上一页
   const handleClose = useCallback(() => {
     const unsent = jobViews.filter((view) => view.sendState !== 'success');
@@ -366,7 +380,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
     jobViews,
     targets,
     targetKind: syncChannel === 'lan' ? ('server' as const) : ('device' as const),
-    isLoadingTargets: syncChannel === 'lan' && lan.isRefreshing,
+    isLoadingTargets: syncChannel === 'lan' ? lan.isRefreshing : isRefreshingP2pTargets,
     selectedTargetIds,
     isSending,
     isDone,
@@ -375,6 +389,7 @@ export function useShareSendController(onClose: () => void, active: boolean) {
     retryJob,
     deleteJob,
     toggleTarget,
+    refreshTargets,
     handleClose,
     handleRetryClaim,
     t,

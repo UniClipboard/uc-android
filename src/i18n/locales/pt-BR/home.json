@@ -37,7 +37,12 @@
     "toggleFlash": "Alternar flash",
     "takePicture": "Tirar foto",
     "startRecording": "Iniciar gravação",
-    "stopRecording": "Parar gravação"
+    "stopRecording": "Parar gravação",
+    "search": "Pesquisar histórico",
+    "clearSearch": "Limpar texto da pesquisa",
+    "searchFilters": "Filtrar resultados da pesquisa",
+    "toggleSelection": "Alternar seleção deste item",
+    "copyItem": "Copiar este item; mantenha pressionado para mais ações"
   },
   "fab": {
     "takePhoto": "Tirar foto",
@@ -78,6 +83,12 @@
     "takePhotoFailed": "Falha ao tirar foto",
     "takeVideoFailed": "Falha ao gravar vídeo",
     "cameraUnavailable": "Câmera indisponível"
+  },
+  "deleteConfirm": {
+    "singleTitle": "Excluir este item do histórico?",
+    "singleMessage": "Este item não aparecerá mais no histórico.",
+    "batchTitle": "Excluir os itens selecionados?",
+    "batchMessage": "Isso excluirá {{count}} itens selecionados."
   },
   "detail": {
     "placeholderTitle": "Selecione um item",

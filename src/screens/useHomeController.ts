@@ -36,6 +36,7 @@ import { useHomeHistoryFilter } from './useHomeHistoryFilter';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import type { CameraCaptureResult } from '@/components/CameraCaptureSheet.types';
+import { confirmHistoryDelete } from '@/utils/confirmHistoryDelete';
 
 const log = createLogger('HomeView');
 
@@ -415,6 +416,13 @@ export function useHomeController(onOpenSettings: () => void) {
           toggleSelection(item.profileHash);
         },
         onDelete: async () => {
+          const confirmed = await confirmHistoryDelete({
+            title: t('deleteConfirm.singleTitle'),
+            message: t('deleteConfirm.singleMessage'),
+            cancelLabel: t('action.cancel', { ns: 'common' }),
+            confirmLabel: t('action.delete', { ns: 'common' }),
+          });
+          if (!confirmed) return;
           await deleteItem(item.profileHash);
           showMessage(t('toast.deleted'), 'success');
         },
@@ -444,9 +452,17 @@ export function useHomeController(onOpenSettings: () => void) {
   }, [selectedIds.size, items.length, clearSelection, selectAll]);
 
   const handleBatchDelete = useCallback(async () => {
+    const count = selectedIds.size;
+    const confirmed = await confirmHistoryDelete({
+      title: t('deleteConfirm.batchTitle'),
+      message: t('deleteConfirm.batchMessage', { count }),
+      cancelLabel: t('action.cancel', { ns: 'common' }),
+      confirmLabel: t('action.delete', { ns: 'common' }),
+    });
+    if (!confirmed) return;
     await deleteSelected();
     setIsSelectMode(false);
-  }, [deleteSelected]);
+  }, [deleteSelected, selectedIds.size, t]);
 
   const handleBatchCopy = useCallback(async () => {
     const selected = items.filter((i) => selectedIds.has(i.profileHash));

@@ -43,11 +43,13 @@
       "title": "Sincronização da área de transferência",
       "autoApply": {
         "title": "Gravar automaticamente na área de transferência",
-        "desc": "Gravar automaticamente no clipboard deste dispositivo o conteúdo novo recebido do espaço"
+        "descLan": "Gravar automaticamente no clipboard deste dispositivo o conteúdo novo recebido do servidor",
+        "descP2p": "Gravar automaticamente no clipboard deste dispositivo o conteúdo novo recebido do espaço"
       },
       "autoPush": {
         "title": "Enviar automaticamente a área de transferência",
-        "desc": "Enviar automaticamente cópias e itens do histórico aos outros dispositivos do espaço"
+        "descLan": "Enviar automaticamente cópias e itens do histórico ao servidor atual",
+        "descP2p": "Enviar automaticamente cópias e itens do histórico aos outros dispositivos do espaço"
       },
       "footer": "Estas opções controlam a direção da sincronização; as configurações de segundo plano controlam onde ela pode ser executada",
       "updateFailed": "Falha na atualização"

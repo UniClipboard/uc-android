@@ -43,11 +43,13 @@
       "title": "Clipboard sync",
       "autoApply": {
         "title": "Auto-write to clipboard",
-        "desc": "When new content arrives from your space, write it to this device clipboard automatically"
+        "descLan": "When new content arrives from the server, write it to this device clipboard automatically",
+        "descP2p": "When new content arrives from your space, write it to this device clipboard automatically"
       },
       "autoPush": {
         "title": "Auto-push clipboard",
-        "desc": "When you copy or use a history item, send it to the other devices in your space automatically"
+        "descLan": "When you copy or use a history item, send it to the current server automatically",
+        "descP2p": "When you copy or use a history item, send it to the other devices in your space automatically"
       },
       "footer": "These options control sync direction; Background settings control where it can run",
       "updateFailed": "Update failed"

@@ -38,6 +38,8 @@ export function DefaultTopBar({
         <Pressable
           onPress={onSelectMode}
           style={[s.pill, { backgroundColor: theme.colors.surfaceHigh }]}
+          accessibilityRole="button"
+          accessibilityLabel={t('action.select', { ns: 'common' })}
         >
           <Text style={[s.pillText, { color: theme.colors.textPrimary }]}>
             {t('action.select', { ns: 'common' })}
@@ -47,6 +49,8 @@ export function DefaultTopBar({
           onPress={onSearch}
           style={s.iconBtn}
           hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.search')}
         >
           <Ionicons name="search" size={22} color={theme.colors.textPrimary} />
         </Pressable>
@@ -88,20 +92,35 @@ export function SearchTopBar({
               autoFocus
             />
             {searchText.length > 0 && (
-              <Pressable onPress={() => onChangeText('')} hitSlop={8}>
+              <Pressable
+                onPress={() => onChangeText('')}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11y.clearSearch')}
+              >
                 <Ionicons name="close-circle" size={16} color={theme.colors.textSecondary} />
               </Pressable>
             )}
           </View>
         </View>
-        <Pressable onPress={onOpenFilters} style={[s.circle, bg]}>
+        <Pressable
+          onPress={onOpenFilters}
+          style={[s.circle, bg]}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.searchFilters')}
+        >
           <Ionicons
             name={hasActiveFilters ? 'filter-circle' : 'filter-circle-outline'}
             size={21}
             color={hasActiveFilters ? theme.colors.accent : theme.colors.textPrimary}
           />
         </Pressable>
-        <Pressable onPress={onClose} style={[s.circle, bg]}>
+        <Pressable
+          onPress={onClose}
+          style={[s.circle, bg]}
+          accessibilityRole="button"
+          accessibilityLabel={t('action.close', { ns: 'common' })}
+        >
           <Ionicons name="close" size={20} color={theme.colors.textPrimary} />
         </Pressable>
       </View>
@@ -134,12 +153,17 @@ export function SelectModeTopBar({
         <Pressable
           onPress={onSelectAll}
           style={[s.pill, { backgroundColor: theme.colors.surfaceHigh }]}
+          accessibilityRole="button"
         >
           <Text style={[s.pillText, { color: theme.colors.textPrimary }]}>
             {allSelected ? t('topBar.deselectAll') : t('action.selectAll', { ns: 'common' })}
           </Text>
         </Pressable>
-        <Pressable onPress={onDone} style={[s.pill, { backgroundColor: theme.colors.surfaceHigh }]}>
+        <Pressable
+          onPress={onDone}
+          style={[s.pill, { backgroundColor: theme.colors.surfaceHigh }]}
+          accessibilityRole="button"
+        >
           <Text style={[s.pillText, { color: theme.colors.textPrimary }]}>
             {t('action.done', { ns: 'common' })}
           </Text>

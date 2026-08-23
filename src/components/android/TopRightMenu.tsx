@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { MoreVertical, ChevronRight } from 'react-native-feather';
 import { useTheme } from '@/hooks/useTheme';
 import { spacing, radius, typography, elevation } from '@/theme';
@@ -26,10 +27,11 @@ interface TopRightMenuProps {
 
 export const TopRightMenu: React.FC<TopRightMenuProps> = ({ items, onClose }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation('common');
   const [showMenu, setShowMenu] = useState(false);
   const [submenuItems, setSubmenuItems] = useState<MenuItemConfig[] | null>(null);
   const [menuTopOffset, setMenuTopOffset] = useState(60);
-  const menuButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
+  const menuButtonRef = useRef<View>(null);
 
   const handleOpenMenu = useCallback(() => {
     if (menuButtonRef.current) {
@@ -71,10 +73,12 @@ export const TopRightMenu: React.FC<TopRightMenuProps> = ({ items, onClose }) =>
 
   const renderMenuItem = (item: MenuItemConfig, index: number, totalItems: number) => (
     <View key={index}>
-      <TouchableOpacity
+      <Pressable
         style={styles.menuItem}
         onPress={() => handleMenuItemPress(item)}
         disabled={item.disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: item.disabled }}
       >
         <Text
           style={[
@@ -93,7 +97,7 @@ export const TopRightMenu: React.FC<TopRightMenuProps> = ({ items, onClose }) =>
         {item.icon && !item.disabled && !item.submenu && (
           <View style={styles.menuItemIcon}>{item.icon}</View>
         )}
-      </TouchableOpacity>
+      </Pressable>
       {index < totalItems - 1 && (
         <View style={[styles.menuDivider, { backgroundColor: theme.colors.separator }]} />
       )}
@@ -102,10 +106,12 @@ export const TopRightMenu: React.FC<TopRightMenuProps> = ({ items, onClose }) =>
 
   const renderSubmenuItem = (item: MenuItemConfig, index: number, totalItems: number) => (
     <View key={index}>
-      <TouchableOpacity
+      <Pressable
         style={styles.menuItem}
         onPress={() => handleSubmenuPress(item)}
         disabled={item.disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: item.disabled }}
       >
         <Text
           style={[
@@ -121,7 +127,7 @@ export const TopRightMenu: React.FC<TopRightMenuProps> = ({ items, onClose }) =>
           {item.label}
         </Text>
         {item.icon && !item.disabled && <View style={styles.menuItemIcon}>{item.icon}</View>}
-      </TouchableOpacity>
+      </Pressable>
       {index < totalItems - 1 && (
         <View style={[styles.menuDivider, { backgroundColor: theme.colors.separator }]} />
       )}
@@ -130,14 +136,16 @@ export const TopRightMenu: React.FC<TopRightMenuProps> = ({ items, onClose }) =>
 
   return (
     <>
-      <TouchableOpacity
+      <Pressable
         ref={menuButtonRef}
         onPress={handleOpenMenu}
         style={styles.headerButton}
         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={t('action.more')}
       >
         <MoreVertical color={theme.colors.textPrimary} width={24} height={24} />
-      </TouchableOpacity>
+      </Pressable>
 
       <Modal visible={showMenu} transparent animationType="none" onRequestClose={handleCloseMenu}>
         <Pressable style={styles.menuOverlay} onPress={handleCloseMenu}>

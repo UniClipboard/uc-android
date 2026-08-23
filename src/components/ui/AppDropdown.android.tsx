@@ -1,17 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ExposedDropdownMenuBox,
   ExposedDropdownMenu,
   DropdownMenuItem,
-  OutlinedTextField,
+  Icon,
+  OutlinedButton,
+  Spacer,
   Text as ComposeText,
-  useNativeState,
 } from '@expo/ui/jetpack-compose';
 import {
   menuAnchor,
   fillMaxWidth,
+  weight,
   width as widthModifier,
 } from '@expo/ui/jetpack-compose/modifiers';
+
+const ICONS = {
+  expandMore: require('../../assets/icons/expand_more.xml'),
+};
 
 export interface AppDropdownOption<T extends string = string> {
   label: string;
@@ -41,15 +47,10 @@ export function AppDropdown<T extends string = string>({
 }: AppDropdownProps<T>) {
   const [expanded, setExpanded] = useState(false);
   const selectedLabel = options.find((o) => o.value === selectedValue)?.label ?? placeholder ?? '';
-  const selectedLabelState = useNativeState(selectedLabel);
-
-  useEffect(() => {
-    selectedLabelState.set(selectedLabel);
-  }, [selectedLabel, selectedLabelState]);
 
   const boxModifiers =
     width !== undefined ? [widthModifier(width)] : fullWidth ? [fillMaxWidth()] : undefined;
-  const fieldModifiers =
+  const buttonModifiers =
     width !== undefined || fullWidth ? [menuAnchor(), fillMaxWidth()] : [menuAnchor()];
 
   return (
@@ -60,16 +61,11 @@ export function AppDropdown<T extends string = string>({
       }}
       modifiers={boxModifiers}
     >
-      <OutlinedTextField
-        key={selectedLabel}
-        value={selectedLabelState}
-        readOnly
-        enabled={disabled !== undefined ? !disabled : undefined}
-        singleLine
-        modifiers={fieldModifiers}
-      >
-        {label ? <OutlinedTextField.Label>{label}</OutlinedTextField.Label> : null}
-      </OutlinedTextField>
+      <OutlinedButton onClick={undefined} enabled={!disabled} modifiers={buttonModifiers}>
+        <ComposeText>{label ? `${label}: ${selectedLabel}` : selectedLabel}</ComposeText>
+        <Spacer modifiers={[weight(1)]} />
+        <Icon source={ICONS.expandMore} size={18} />
+      </OutlinedButton>
       <ExposedDropdownMenu expanded={expanded} onDismissRequest={() => setExpanded(false)}>
         {options.map((option) => (
           <DropdownMenuItem

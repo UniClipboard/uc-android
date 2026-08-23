@@ -7,24 +7,18 @@ import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ListItem,
-  Switch as ComposeSwitch,
   OutlinedTextField,
   HorizontalDivider,
-  ExposedDropdownMenuBox,
-  ExposedDropdownMenu,
-  DropdownMenuItem,
   Text as ComposeText,
   useNativeState,
 } from '@expo/ui/jetpack-compose';
-import {
-  fillMaxWidth,
-  width as widthModifier,
-  menuAnchor,
-} from '@expo/ui/jetpack-compose/modifiers';
+import { width as widthModifier } from '@expo/ui/jetpack-compose/modifiers';
+import { AppDropdown } from '@/components/ui';
 import { useSettingsStore } from '@/stores';
 import { useSettingsToast } from './SettingsToastContext';
 import { useBlurCommit } from './useBlurCommit';
 import { SettingsSectionItem } from './SettingsSectionItem';
+import { SettingsSwitchRow } from './android/SettingsSwitchRow';
 
 type ImageAutoDownload = 'wifi' | 'always' | 'off';
 const IMAGE_AUTO_DOWNLOAD_VALUES: ImageAutoDownload[] = ['wifi', 'always', 'off'];
@@ -41,7 +35,6 @@ export const HistorySection = memo(function HistorySection() {
   const [maxHistoryItemsInput, setMaxHistoryItemsInput] = useState(() =>
     (useSettingsStore.getState().config?.maxHistoryItems ?? 1000).toString()
   );
-  const [showImageAutoDownloadMenu, setShowImageAutoDownloadMenu] = useState(false);
 
   const imageAutoDownloadOptions = IMAGE_AUTO_DOWNLOAD_VALUES.map((value) => ({
     value,
@@ -49,10 +42,6 @@ export const HistorySection = memo(function HistorySection() {
   }));
 
   const maxHistoryItemsNativeState = useNativeState(maxHistoryItemsInput);
-  const imageAutoDownloadLabel =
-    imageAutoDownloadOptions.find((o) => o.value === attachmentAutoDownload)?.label ??
-    t('autoDownload.wifi');
-  const imageAutoDownloadNativeState = useNativeState(imageAutoDownloadLabel);
 
   const handleMaxHistoryItemsBlur = async () => {
     const resetToCurrent = () =>
@@ -120,58 +109,25 @@ export const HistorySection = memo(function HistorySection() {
           <ComposeText>{t('history.autoDownloadLabel')}</ComposeText>
         </ListItem.HeadlineContent>
         <ListItem.TrailingContent>
-          <ExposedDropdownMenuBox
-            expanded={showImageAutoDownloadMenu}
-            onExpandedChange={setShowImageAutoDownloadMenu}
-            modifiers={[widthModifier(140)]}
-          >
-            <OutlinedTextField
-              key={attachmentAutoDownload}
-              value={imageAutoDownloadNativeState}
-              readOnly
-              singleLine
-              modifiers={[menuAnchor(), fillMaxWidth()]}
-            />
-            <ExposedDropdownMenu
-              expanded={showImageAutoDownloadMenu}
-              onDismissRequest={() => setShowImageAutoDownloadMenu(false)}
-            >
-              {imageAutoDownloadOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => {
-                    handleImageAutoDownloadChange(option.value);
-                    setShowImageAutoDownloadMenu(false);
-                  }}
-                >
-                  <DropdownMenuItem.Text>
-                    <ComposeText>{option.label}</ComposeText>
-                  </DropdownMenuItem.Text>
-                </DropdownMenuItem>
-              ))}
-            </ExposedDropdownMenu>
-          </ExposedDropdownMenuBox>
+          <AppDropdown
+            options={imageAutoDownloadOptions}
+            selectedValue={attachmentAutoDownload}
+            onSelect={(value) => void handleImageAutoDownloadChange(value)}
+            width={140}
+          />
         </ListItem.TrailingContent>
       </ListItem>
 
       <HorizontalDivider />
 
-      <ListItem>
-        <ListItem.HeadlineContent>
-          <ComposeText>{t('history.showCopyButtonLabel')}</ComposeText>
-        </ListItem.HeadlineContent>
-        <ListItem.SupportingContent>
-          <ComposeText>{t('history.showCopyButtonHint')}</ComposeText>
-        </ListItem.SupportingContent>
-        <ListItem.TrailingContent>
-          <ComposeSwitch
-            value={showImageCopyButton}
-            onCheckedChange={(enabled) =>
-              useSettingsStore.getState().updateConfig({ showImageCopyButton: enabled })
-            }
-          />
-        </ListItem.TrailingContent>
-      </ListItem>
+      <SettingsSwitchRow
+        title={t('history.showCopyButtonLabel')}
+        description={t('history.showCopyButtonHint')}
+        value={showImageCopyButton}
+        onValueChange={(enabled) =>
+          void useSettingsStore.getState().updateConfig({ showImageCopyButton: enabled })
+        }
+      />
     </SettingsSectionItem>
   );
 });

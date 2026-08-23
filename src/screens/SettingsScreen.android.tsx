@@ -15,7 +15,6 @@ import {
   ListItem,
   HorizontalDivider,
   Icon,
-  Switch as ComposeSwitch,
   Text as ComposeText,
   useMaterialColors,
 } from '@expo/ui/jetpack-compose';
@@ -31,6 +30,7 @@ import { settingsStyles as styles } from './settings/settingsStyles';
 import { SettingsToastProvider, useSettingsToast } from './settings/SettingsToastContext';
 import { SettingsSectionItem } from './settings/SettingsSectionItem';
 import { AnalyticsConsentControl } from './settings/AnalyticsConsentControl';
+import { SettingsSwitchRow } from './settings/android/SettingsSwitchRow';
 
 // XML 矢量图标(Material Icons 路径),由 @expo/ui Icon 在原生侧解析渲染。
 const ICONS: Record<SettingsSubSection | 'chevron', number> = {
@@ -89,8 +89,19 @@ interface HubGroupProps {
 const ClipboardSyncDirectionGroup = memo(function ClipboardSyncDirectionGroup() {
   const { t } = useTranslation('settings');
   const showMessage = useSettingsToast();
+  const syncChannel = useSettingsStore((s) => s.config?.syncChannel ?? 'lan');
   const autoApplyRemote = useSettingsStore((s) => s.config?.autoApplyRemote ?? true);
   const autoPushLocal = useSettingsStore((s) => s.config?.autoPushLocal ?? true);
+  const autoApplyDescription = t(
+    syncChannel === 'p2p'
+      ? 'hub.clipboardSync.autoApply.descP2p'
+      : 'hub.clipboardSync.autoApply.descLan'
+  );
+  const autoPushDescription = t(
+    syncChannel === 'p2p'
+      ? 'hub.clipboardSync.autoPush.descP2p'
+      : 'hub.clipboardSync.autoPush.descLan'
+  );
 
   const updateDirection = async (
     updates: { autoApplyRemote: boolean } | { autoPushLocal: boolean }
@@ -106,37 +117,21 @@ const ClipboardSyncDirectionGroup = memo(function ClipboardSyncDirectionGroup() 
       title={t('hub.clipboardSync.title')}
       footer={t('hub.clipboardSync.footer')}
     >
-      <ListItem>
-        <ListItem.HeadlineContent>
-          <ComposeText>{t('hub.clipboardSync.autoApply.title')}</ComposeText>
-        </ListItem.HeadlineContent>
-        <ListItem.SupportingContent>
-          <ComposeText>{t('hub.clipboardSync.autoApply.desc')}</ComposeText>
-        </ListItem.SupportingContent>
-        <ListItem.TrailingContent>
-          <ComposeSwitch
-            value={autoApplyRemote}
-            onCheckedChange={(enabled) => updateDirection({ autoApplyRemote: enabled })}
-          />
-        </ListItem.TrailingContent>
-      </ListItem>
+      <SettingsSwitchRow
+        title={t('hub.clipboardSync.autoApply.title')}
+        description={autoApplyDescription}
+        value={autoApplyRemote}
+        onValueChange={(enabled) => void updateDirection({ autoApplyRemote: enabled })}
+      />
 
       <HorizontalDivider />
 
-      <ListItem>
-        <ListItem.HeadlineContent>
-          <ComposeText>{t('hub.clipboardSync.autoPush.title')}</ComposeText>
-        </ListItem.HeadlineContent>
-        <ListItem.SupportingContent>
-          <ComposeText>{t('hub.clipboardSync.autoPush.desc')}</ComposeText>
-        </ListItem.SupportingContent>
-        <ListItem.TrailingContent>
-          <ComposeSwitch
-            value={autoPushLocal}
-            onCheckedChange={(enabled) => updateDirection({ autoPushLocal: enabled })}
-          />
-        </ListItem.TrailingContent>
-      </ListItem>
+      <SettingsSwitchRow
+        title={t('hub.clipboardSync.autoPush.title')}
+        description={autoPushDescription}
+        value={autoPushLocal}
+        onValueChange={(enabled) => void updateDirection({ autoPushLocal: enabled })}
+      />
     </SettingsSectionItem>
   );
 });

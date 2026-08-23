@@ -40,6 +40,7 @@ import type { ClipboardCardProps } from './ClipboardCard.types';
 export const ClipboardCard: React.FC<ClipboardCardProps> = React.memo(
   ({ item, isLatest, isSelected, isSelectMode, onPress, onLongPress }) => {
     const { theme } = useTheme();
+    const { t } = useTranslation('home');
     const displayKind = useMemo(() => getDisplayKind(item.type, item.text), [item.type, item.text]);
     const kindLabel = useMemo(() => getDisplayKindLabel(displayKind), [displayKind]);
     const kindColor = useMemo(() => getDisplayKindColor(displayKind), [displayKind]);
@@ -77,6 +78,12 @@ export const ClipboardCard: React.FC<ClipboardCardProps> = React.memo(
           onPressOut={() => {
             pressScale.value = withTiming(1, { duration: 150 });
           }}
+          accessibilityRole="button"
+          accessibilityLabel={[kindLabel, relativeTime, item.dataName || item.text]
+            .filter(Boolean)
+            .join(', ')}
+          accessibilityHint={t(isSelectMode ? 'a11y.toggleSelection' : 'a11y.copyItem')}
+          accessibilityState={{ selected: isSelectMode ? isSelected : undefined }}
           style={[
             styles.card,
             {
@@ -96,7 +103,7 @@ export const ClipboardCard: React.FC<ClipboardCardProps> = React.memo(
             theme={theme}
           />
           {isSelectMode && (
-            <View style={styles.selectOverlay}>
+            <View style={styles.selectOverlay} accessible={false}>
               <Ionicons
                 name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                 size={28}

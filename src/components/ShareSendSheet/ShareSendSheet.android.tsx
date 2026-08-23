@@ -155,6 +155,7 @@ function ShareBody({
               label={t(c.targetKind === 'server' ? 'send.servers' : 'send.devices')}
               emptyLabel={t(c.targetKind === 'server' ? 'send.noServers' : 'send.noDevices')}
               isLoading={c.isLoadingTargets}
+              onRefresh={c.refreshTargets}
             />
           </>
         )}
@@ -243,6 +244,7 @@ function TargetSection({
   label,
   emptyLabel,
   isLoading,
+  onRefresh,
 }: {
   targets: ShareTarget[];
   selectedTargetIds: Set<string>;
@@ -251,14 +253,29 @@ function TargetSection({
   label: string;
   emptyLabel: string;
   isLoading: boolean;
+  onRefresh: () => Promise<void>;
 }) {
+  const { t } = useTranslation('share');
   return (
     <>
       <SectionLabel theme={theme} label={label} />
       {isLoading ? (
         <ActivityIndicator color={theme.accent} style={styles.targetLoading} />
       ) : targets.length === 0 ? (
-        <Text style={[styles.noTargets, { color: theme.textSecondary }]}>{emptyLabel}</Text>
+        <View style={styles.noTargetsBox}>
+          <Text style={[styles.noTargets, { color: theme.textSecondary }]}>{emptyLabel}</Text>
+          <Pressable
+            onPress={() => void onRefresh()}
+            style={[styles.refreshTargetsButton, { backgroundColor: theme.accentContainer }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('action.refresh', { ns: 'common' })}
+          >
+            <Ionicons name="refresh" size={18} color={theme.onAccentContainer} />
+            <Text style={[styles.refreshTargetsText, { color: theme.onAccentContainer }]}>
+              {t('action.refresh', { ns: 'common' })}
+            </Text>
+          </Pressable>
+        </View>
       ) : (
         targets.map((target) => (
           <TargetRow
@@ -400,6 +417,17 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 15, fontWeight: '500' },
   cardDetail: { fontSize: 12 },
   noTargets: { fontSize: 14, textAlign: 'center', paddingVertical: 20 },
+  noTargetsBox: { alignItems: 'center', gap: 4, paddingBottom: 8 },
+  refreshTargetsButton: {
+    minHeight: 44,
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  refreshTargetsText: { fontSize: 14, fontWeight: '600' },
   targetLoading: { paddingVertical: 20 },
   targetRow: {
     flexDirection: 'row',

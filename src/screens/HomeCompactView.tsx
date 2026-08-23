@@ -39,6 +39,7 @@ export function HomeCompactView({
 
   const cardSize =
     (screenWidth - GRID_PADDING * 2 - GRID_SPACING * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+  const selectionBarClearance = c.insets.bottom + 76;
 
   const chipRowCollapse = useChipRowCollapse(CHIP_ROW_GRID_METRICS.contentInsetTop);
   // 筛选后列表为空时强制展开筛选行,保证用户能撤掉筛选
@@ -98,7 +99,7 @@ export function HomeCompactView({
             spacing={GRID_SPACING}
             paddingHorizontal={GRID_PADDING - GRID_SPACING / 2}
             paddingTop={8 + CHIP_ROW_GRID_METRICS.paddingTopExtra}
-            paddingBottom={80}
+            paddingBottom={isSelectMode ? selectionBarClearance : 80}
             keyExtractor={c.keyExtractor}
             renderItem={renderCard}
             onEndReached={c.loadMoreItems}
@@ -135,7 +136,12 @@ export function HomeCompactView({
 
       {/* 多选底栏(默认态由右下 FAB 取代) */}
       {isSelectMode && (
-        <View style={[styles.bottomBar, { paddingBottom: c.insets.bottom + 10 }]}>
+        <View
+          style={[
+            styles.bottomBar,
+            { paddingBottom: c.insets.bottom + 10, backgroundColor: theme.colors.surfaceLow },
+          ]}
+        >
           <SelectModeBottomBar
             disabled={selectedIds.size === 0}
             onCopy={c.handleBatchCopy}

@@ -37,7 +37,12 @@
     "toggleFlash": "切换闪光灯",
     "takePicture": "拍照",
     "startRecording": "开始录像",
-    "stopRecording": "停止录像"
+    "stopRecording": "停止录像",
+    "search": "搜索历史记录",
+    "clearSearch": "清除搜索文字",
+    "searchFilters": "筛选搜索结果",
+    "toggleSelection": "切换这条记录的选中状态",
+    "copyItem": "复制这条记录，长按查看更多操作"
   },
   "fab": {
     "takePhoto": "拍照",
@@ -78,6 +83,12 @@
     "takePhotoFailed": "拍照失败",
     "takeVideoFailed": "录像失败",
     "cameraUnavailable": "相机不可用"
+  },
+  "deleteConfirm": {
+    "singleTitle": "删除这条历史记录？",
+    "singleMessage": "删除后将不再显示这条记录。",
+    "batchTitle": "删除所选历史记录？",
+    "batchMessage": "将删除所选的 {{count}} 条记录。"
   },
   "detail": {
     "placeholderTitle": "选择一项查看详情",

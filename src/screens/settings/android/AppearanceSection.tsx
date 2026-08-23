@@ -8,7 +8,6 @@
 import React, { memo } from 'react';
 import {
   ListItem,
-  Switch as ComposeSwitch,
   HorizontalDivider,
   Text as ComposeText,
 } from '@expo/ui/jetpack-compose';
@@ -25,6 +24,7 @@ import {
 } from '@/i18n/languages';
 import { useSettingsToast } from '../SettingsToastContext';
 import { SettingsSectionItem } from '../SettingsSectionItem';
+import { SettingsSwitchRow } from './SettingsSwitchRow';
 
 export const AppearanceSection = memo(function AppearanceSection() {
   const { t } = useTranslation('settings');
@@ -112,17 +112,12 @@ export const AppearanceSection = memo(function AppearanceSection() {
 
       <>
         <HorizontalDivider />
-        <ListItem>
-          <ListItem.HeadlineContent>
-            <ComposeText>{t('appearance.hideFromRecents.title')}</ComposeText>
-          </ListItem.HeadlineContent>
-          <ListItem.SupportingContent>
-            <ComposeText>{t('appearance.hideFromRecents.desc')}</ComposeText>
-          </ListItem.SupportingContent>
-          <ListItem.TrailingContent>
-            <ComposeSwitch value={hideFromRecents} onCheckedChange={handleToggleHideFromRecents} />
-          </ListItem.TrailingContent>
-        </ListItem>
+        <SettingsSwitchRow
+          title={t('appearance.hideFromRecents.title')}
+          description={t('appearance.hideFromRecents.desc')}
+          value={hideFromRecents}
+          onValueChange={(enabled) => void handleToggleHideFromRecents(enabled)}
+        />
       </>
     </SettingsSectionItem>
   );

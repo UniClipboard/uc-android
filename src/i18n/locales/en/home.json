@@ -37,7 +37,12 @@
     "toggleFlash": "Toggle flash",
     "takePicture": "Take picture",
     "startRecording": "Start recording",
-    "stopRecording": "Stop recording"
+    "stopRecording": "Stop recording",
+    "search": "Search history",
+    "clearSearch": "Clear search text",
+    "searchFilters": "Filter search results",
+    "toggleSelection": "Toggle selection for this item",
+    "copyItem": "Copy this item; long press for more actions"
   },
   "fab": {
     "takePhoto": "Take photo",
@@ -78,6 +83,12 @@
     "takePhotoFailed": "Couldn't take photo",
     "takeVideoFailed": "Couldn't record video",
     "cameraUnavailable": "Camera unavailable"
+  },
+  "deleteConfirm": {
+    "singleTitle": "Delete this history item?",
+    "singleMessage": "This item will no longer appear in history.",
+    "batchTitle": "Delete selected history items?",
+    "batchMessage": "This will delete {{count}} selected items."
   },
   "detail": {
     "placeholderTitle": "Select an item",

@@ -85,15 +85,15 @@ export const AppNavigator = () => {
 
   // 子页面标题在组件内按当前语言构建(而非模块级常量),切换语言即时生效
   const subScreenTitles: Record<SettingsSubSection, string> = {
-    syncChannel: t('syncChannel.title'),
+    syncChannel: t('syncChannel.title', { ns: 'settings' }),
     space: t('space.title', { ns: 'settingsSync' }),
     lanServers: t('lan.title', { ns: 'settingsSync' }),
-    history: t('nav.history'),
-    background: t('nav.background'),
-    appearance: t('nav.appearance'),
-    storage: t('nav.storage'),
-    about: t('nav.about'),
-    developer: t('nav.developer'),
+    history: t('category.history', { ns: 'settings' }),
+    background: t('category.background', { ns: 'settings' }),
+    appearance: t('appearance.sectionTitle', { ns: 'settings' }),
+    storage: t('category.storage', { ns: 'settings' }),
+    about: t('category.about', { ns: 'settings' }),
+    developer: t('category.developer', { ns: 'settings' }),
   };
 
   const navigationTheme = theme.isDark

@@ -37,7 +37,12 @@
     "toggleFlash": "Переключить вспышку",
     "takePicture": "Сделать фото",
     "startRecording": "Начать запись",
-    "stopRecording": "Остановить запись"
+    "stopRecording": "Остановить запись",
+    "search": "Поиск в истории",
+    "clearSearch": "Очистить строку поиска",
+    "searchFilters": "Фильтровать результаты поиска",
+    "toggleSelection": "Изменить выбор этой записи",
+    "copyItem": "Копировать запись; удерживайте для дополнительных действий"
   },
   "fab": {
     "takePhoto": "Сделать фото",
@@ -78,6 +83,12 @@
     "takePhotoFailed": "Не удалось сделать фото",
     "takeVideoFailed": "Не удалось записать видео",
     "cameraUnavailable": "Камера недоступна"
+  },
+  "deleteConfirm": {
+    "singleTitle": "Удалить эту запись?",
+    "singleMessage": "Эта запись больше не будет отображаться в истории.",
+    "batchTitle": "Удалить выбранные записи?",
+    "batchMessage": "Будет удалено выбранных записей: {{count}}."
   },
   "detail": {
     "placeholderTitle": "Выберите элемент",

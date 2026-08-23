@@ -49,6 +49,7 @@ jest.mock('@expo/ui/jetpack-compose/modifiers', () => ({
   fillMaxWidth: () => ({}),
   padding: () => ({}),
   height: () => ({}),
+  toggleable: () => ({}),
 }));
 
 jest.mock('react-i18next', () => ({
