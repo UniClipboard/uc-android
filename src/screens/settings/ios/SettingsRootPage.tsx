@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { IosSheetForm, IosSheetPage } from '@/components/ui';
 import { useSettingsStore } from '@/stores';
 import { useTheme } from '@/hooks/useTheme';
-import { APP_VERSION } from '@/constants';
+import { APP_VERSION_WITH_BUILD } from '@/constants';
 import type { ThemeMode } from '@/theme';
 import { useAppLanguage } from '@/i18n/useAppLanguage';
 import {
@@ -233,7 +233,9 @@ export function SettingsRootPage({
               </HStack>
             }
           >
-            <SwiftUIText modifiers={[foregroundStyle('secondary')]}>{APP_VERSION}</SwiftUIText>
+            <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
+              {APP_VERSION_WITH_BUILD}
+            </SwiftUIText>
           </LabeledContent>
         </Section>
 

@@ -11,4 +11,10 @@ describe('iOS settings root page', () => {
     expect(settingsRootPage).not.toContain('active = true');
     expect(settingsRootPage).not.toContain('if (active) refreshKeyboard();');
   });
+
+  it('shows the native version together with the iOS build number', () => {
+    expect(settingsRootPage).toContain("import { APP_VERSION_WITH_BUILD } from '@/constants'");
+    expect(settingsRootPage).toContain('{APP_VERSION_WITH_BUILD}');
+    expect(settingsRootPage).not.toContain('{APP_VERSION}</SwiftUIText>');
+  });
 });
