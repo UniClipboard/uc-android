@@ -20,6 +20,10 @@ public class AppGroupStoreModule: Module {
       return String(data: data, encoding: .utf8) ?? "{}"
     }
 
+    AsyncFunction("getLegacyLanConfiguration") { () -> String? in
+      SettingsStore.loadLegacyLanConfigurationJSON()
+    }
+
     // Free signal: reading changeCount never triggers the iOS paste
     // permission prompt, unlike reading the pasteboard's actual contents.
     Function("getPasteboardChangeCount") { () -> Int in
@@ -123,13 +127,13 @@ public class AppGroupStoreModule: Module {
       try self.importPayloadFile(profileId: profileId, sourceUri: sourceUri)
     }
 
-    AsyncFunction("migrateLegacyContainer") { () -> [String: Any] in
-      let result = SettingsStore.migrateLegacyContainer()
+    AsyncFunction("migrateLegacyContainer") { () throws -> [String: Any] in
+      let result = try SettingsStore.migrateLegacyContainer()
       return ["migrated": result.migrated, "keys": result.keys]
     }
 
-    AsyncFunction("clearLegacyLanConfiguration") { () -> Void in
-      SettingsStore.clearLegacyLanConfiguration()
+    AsyncFunction("clearLegacyLanConfiguration") { () throws -> Void in
+      try SettingsStore.clearLegacyLanConfiguration()
     }
 
     AsyncFunction("getKeyboardStatus") { () -> [String: Any] in

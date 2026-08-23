@@ -6,6 +6,7 @@
  */
 
 import { HistoryStorage } from '../features/history';
+import { historyRepository } from '../features/history/internal/historyRepository';
 import { ClipboardItem, HistorySyncStatus } from '../types/clipboard';
 import { STORAGE_KEYS } from '../types/storage';
 
@@ -96,6 +97,19 @@ async function initWithStoredHistory(items: ClipboardItem[]): Promise<HistorySto
   return storage;
 }
 
+function seedAsyncHistory(items: ClipboardItem[]): void {
+  for (const key of Object.keys(asyncStore)) delete asyncStore[key];
+  asyncStore[STORAGE_KEYS.HISTORY] = JSON.stringify(items);
+  asyncStore[STORAGE_KEYS.HISTORY_VERSION] = '1';
+}
+
+async function newStorage(): Promise<HistoryStorage> {
+  (HistoryStorage as unknown as { instance: null }).instance = null;
+  const storage = HistoryStorage.getInstance();
+  await storage.initialize();
+  return storage;
+}
+
 describe('HistoryStorage 加载时去重自愈', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -166,5 +180,54 @@ describe('HistoryStorage 加载时去重自愈', () => {
       ([key]: [string]) => key === STORAGE_KEYS.HISTORY
     );
     expect(historyWrites).toHaveLength(0);
+  });
+
+  it('SQLite 已有少量记录时仍补齐旧历史中缺失的记录', async () => {
+    seedAsyncHistory([
+      createItem('existing', 100, { text: 'old snapshot' }),
+      createItem('missing', 200),
+    ]);
+    const storage = await newStorage();
+    await storage.addItem(createItem('existing', 500, { text: 'current database value' }));
+
+    await storage.runStartupMaintenance();
+
+    const items = await storage.getAllItems();
+    expect(items.map(({ profileHash }) => profileHash).sort()).toEqual(['existing', 'missing']);
+    expect(items.find(({ profileHash }) => profileHash === 'existing')?.text).toBe(
+      'current database value'
+    );
+  });
+
+  it('旧历史不能复活 SQLite 中已经删除的记录', async () => {
+    seedAsyncHistory([createItem('deleted', 100, { text: 'old live value' })]);
+    const storage = await newStorage();
+    await storage.addItem(createItem('deleted', 500, { text: 'current value' }));
+    await storage.softDeleteItem('deleted');
+
+    await storage.runStartupMaintenance();
+
+    expect(await storage.getAllItems()).toEqual([]);
+  });
+
+  it('批量迁移中断后下一次启动继续补齐且不产生重复项', async () => {
+    seedAsyncHistory([createItem('a', 100), createItem('b', 200), createItem('c', 300)]);
+    const storage = await newStorage();
+    const originalReplaceMany = historyRepository.replaceMany.bind(historyRepository);
+    const replaceSpy = jest.spyOn(historyRepository, 'replaceMany');
+    replaceSpy.mockImplementationOnce(async (items) => {
+      await originalReplaceMany(items.slice(0, 1));
+      throw new Error('simulated interruption');
+    });
+
+    await storage.runStartupMaintenance();
+    expect(await storage.getAllItems()).toHaveLength(1);
+    replaceSpy.mockRestore();
+
+    const resumed = await newStorage();
+    await resumed.runStartupMaintenance();
+    const items = await resumed.getAllItems();
+    expect(items.map(({ profileHash }) => profileHash).sort()).toEqual(['a', 'b', 'c']);
+    expect(new Set(items.map(({ profileHash }) => profileHash.toLowerCase())).size).toBe(3);
   });
 });

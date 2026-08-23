@@ -3,6 +3,7 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 interface AppGroupStoreNativeModule {
   saveSettings(json: string): Promise<void>;
   getSettings(): Promise<string>;
+  getLegacyLanConfiguration?(): Promise<string | null>;
   getContainerUrl(): Promise<string | null>;
   getLegacyHistory(): Promise<string | null>;
   getShareDiagnostics(): Promise<string | null>;
@@ -56,6 +57,21 @@ export interface AppSettingsDTO {
 export interface LegacyMigrationResult {
   migrated: boolean;
   keys: number;
+}
+
+export interface LegacyLanServerDTO {
+  id?: string;
+  name?: string;
+  url?: string;
+  urls?: string[];
+  username?: string;
+  password?: string;
+}
+
+export interface LegacyLanConfigurationDTO {
+  servers: LegacyLanServerDTO[];
+  activeServerIndex: number;
+  trustInsecureCert: boolean;
 }
 
 export interface KeyboardStatusDTO {
@@ -170,6 +186,12 @@ export function saveSettings(settings: AppSettingsDTO): Promise<void> {
 export async function getSettings(): Promise<AppSettingsDTO> {
   const json = await NativeModule?.getSettings();
   return parseNativeJson(json, {});
+}
+
+export async function getLegacyLanConfiguration(): Promise<LegacyLanConfigurationDTO | null> {
+  if (typeof NativeModule?.getLegacyLanConfiguration !== 'function') return null;
+  const json = await NativeModule.getLegacyLanConfiguration();
+  return parseNativeJson<LegacyLanConfigurationDTO | null>(json ?? undefined, null);
 }
 
 /**

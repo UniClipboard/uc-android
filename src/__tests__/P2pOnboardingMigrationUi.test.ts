@@ -47,8 +47,6 @@ describe('P2P onboarding and upgrade UI', () => {
     const setupScreens = [
       source('screens/OnboardingScreen.android.tsx'),
       source('screens/OnboardingScreen.ios.tsx'),
-      source('screens/LegacyPairingGuide.android.tsx'),
-      source('screens/LegacyPairingGuide.ios.tsx'),
     ];
 
     expect(entry).toContain("export * from './SpaceSetupResult.android'");
@@ -73,12 +71,10 @@ describe('P2P onboarding and upgrade UI', () => {
     }
   });
 
-  it('omits the top brand from new and upgraded user onboarding', () => {
+  it('omits the top brand from new-user onboarding', () => {
     const screens = [
       source('screens/OnboardingScreen.android.tsx'),
       source('screens/OnboardingScreen.ios.tsx'),
-      source('screens/LegacyPairingGuide.android.tsx'),
-      source('screens/LegacyPairingGuide.ios.tsx'),
     ];
 
     for (const screen of screens) {
@@ -113,47 +109,21 @@ describe('P2P onboarding and upgrade UI', () => {
     expect(navigator).toContain("completionStatus === 'incomplete'");
   });
 
-  it('provides a dedicated platform-native upgrade guide that opens Join Space directly', () => {
-    const entry = source('screens/LegacyPairingGuide.tsx');
-    const types = source('screens/LegacyPairingGuide.types.ts');
-    const android = source('screens/LegacyPairingGuide.android.tsx');
-    const ios = source('screens/LegacyPairingGuide.ios.tsx');
-
-    expect(entry).toContain("export * from './LegacyPairingGuide.android'");
-    expect(types).toContain('onComplete');
-    expect(types).not.toContain('onDefer');
-    for (const platform of [android, ios]) {
-      expect(platform).toContain('AddSyncConnectionSheet');
-      expect(platform).toContain('initialMode="join"');
-      expect(platform).toContain("t('migration.title')");
-      expect(platform).toContain("t('migration.body')");
-      expect(platform).toContain("t('migration.historyKept')");
-      expect(platform).toContain("t('migration.repairReason')");
-      expect(platform).toContain("t('migration.desktopHint')");
-      expect(platform).toContain("t('migration.join')");
-      expect(platform).not.toContain("'create'");
-      expect(platform).not.toContain("'choose'");
+  it('removes the obsolete mandatory re-pairing screens', () => {
+    for (const file of [
+      'screens/LegacyPairingGuide.tsx',
+      'screens/LegacyPairingGuide.types.ts',
+      'screens/LegacyPairingGuide.android.tsx',
+      'screens/LegacyPairingGuide.ios.tsx',
+    ]) {
+      expect(source(file)).toBe('');
     }
-    expect(android).toContain('SyncUpgradeArt');
   });
 
-  it('ships the recovery explanation and desktop invitation prompt in every language', () => {
+  it('removes the obsolete re-pairing explanation from every language', () => {
     for (const locale of ['en', 'pt-BR', 'ru', 'zh']) {
       const onboarding = JSON.parse(source(`i18n/locales/${locale}/onboarding.json`));
-
-      expect(Object.keys(onboarding.migration).sort()).toEqual([
-        'body',
-        'desktopHint',
-        'historyKept',
-        'join',
-        'repairReason',
-        'title',
-      ]);
+      expect(onboarding.migration).toBeUndefined();
     }
-
-    const zh = JSON.parse(source('i18n/locales/zh/onboarding.json'));
-    expect(zh.migration.title).toBe('同步方式已升级');
-    expect(zh.migration.historyKept).toBe('本地剪贴板历史仍然保留');
-    expect(zh.migration.join).toBe('开始重新配对');
   });
 });

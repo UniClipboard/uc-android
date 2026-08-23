@@ -24,13 +24,14 @@ describe('AppNavigator native stack', () => {
     expect(packageJson.dependencies['@react-navigation/stack']).toBeUndefined();
   });
 
-  it('returns only persistently incomplete users to mandatory onboarding', () => {
+  it('returns only incomplete P2P users to mandatory onboarding', () => {
     const navigatorSource = readSource('navigation/AppNavigator.tsx');
     const appSource = fs.readFileSync(path.join(__dirname, '..', '..', 'App.tsx'), 'utf8');
 
     expect(navigatorSource).toContain('useSpaceSetupCompletionStore');
     expect(navigatorSource).toContain("completionStatus === 'unknown'");
     expect(navigatorSource).toContain("completionStatus === 'incomplete'");
+    expect(navigatorSource).toContain("config.syncChannel === 'p2p'");
     expect(navigatorSource).toContain('setupSession');
     expect(navigatorSource).not.toContain(
       "showOnboarding = !!config && !showMigration && spaceStatus === 'empty'"
@@ -43,14 +44,14 @@ describe('AppNavigator native stack', () => {
     expect(appSource).toContain('retryPendingWrite()');
   });
 
-  it('sends upgraded LAN users to a join-only recovery screen', () => {
+  it('does not force upgraded LAN users through the removed re-pairing screen', () => {
     const navigatorSource = readSource('navigation/AppNavigator.tsx');
+    const navigatorTypes = readSource('navigation/AppNavigator.types.ts');
 
-    expect(navigatorSource).toContain('LegacyPairingGuide');
-    expect(navigatorSource).toContain("legacyPairingGuide === 'pending'");
-    expect(navigatorSource).toContain("spaceStatus === 'ready'");
-    expect(navigatorSource).toContain("if (config && spaceStatus === 'ready'");
-    expect(navigatorSource).toContain('name="Migration"');
-    expect(navigatorSource).not.toContain('onDefer');
+    expect(navigatorSource).not.toContain('LegacyPairingGuide');
+    expect(navigatorSource).not.toContain('legacyPairingGuide');
+    expect(navigatorSource).not.toContain('name="Migration"');
+    expect(navigatorTypes).not.toContain('Migration:');
+    expect(navigatorSource).toContain("config.syncChannel === 'p2p'");
   });
 });

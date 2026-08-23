@@ -65,7 +65,7 @@ public final class SettingsStore: @unchecked Sendable {
         "last_history_sync_at",
     ]
 
-    private static let legacyAppGroupIDs = ["group.app.uniclipboard.ios"]
+    static let legacyAppGroupIDs = ["group.app.uniclipboard.ios"]
 
     private let defaults: UserDefaults
     private let containerURL: URL
@@ -120,12 +120,9 @@ public final class SettingsStore: @unchecked Sendable {
 
     }
 
-    /// One-shot migration from `.standard` to the App Group suite. Runs
-    /// the first time we open the suite after the App Group entitlement
-    /// is added: copies known keys over and removes them from `.standard`.
-    /// Idempotent — if any known key already exists in the suite the
-    /// migration is considered done and skipped, so a re-install can't be
-    /// overridden by a stale `.standard` blob.
+    /// Copies each missing `.standard` key into the App Group independently.
+    /// Existing destination values win; a failed write leaves its source key
+    /// intact so the next store initialization can retry the remaining keys.
     private static func migrateFromStandardIfNeeded(into suite: UserDefaults) {
         let keys = [
             AppSettings.PersistenceKey.appSettings,
@@ -134,47 +131,45 @@ public final class SettingsStore: @unchecked Sendable {
             AppSettings.PersistenceKey.keyboardExtensionFullAccess,
             AppSettings.PersistenceKey.lastSyncedChangeCount,
         ]
-        for key in keys where suite.object(forKey: key) != nil {
-            return
-        }
         let standard = UserDefaults.standard
-        var migrated = 0
-        for key in keys {
-            guard let value = standard.object(forKey: key) else { continue }
-            suite.set(value, forKey: key)
-            standard.removeObject(forKey: key)
-            migrated += 1
-        }
-        if migrated > 0 {
-            log.info("migrateFromStandardIfNeeded: moved \(migrated, privacy: .public) keys from .standard to the App Group suite")
+        do {
+            let migrated = try LegacyDefaultsMigrator.migrate(
+                source: standard,
+                destination: suite,
+                keys: keys,
+                removeSourceAfterCopy: true
+            )
+            if migrated > 0 {
+                log.info("migrateFromStandardIfNeeded: moved \(migrated, privacy: .public) keys from .standard to the App Group suite")
+            }
+        } catch {
+            log.error("migrateFromStandardIfNeeded: deferred remaining keys after a write failure")
         }
     }
 
     /// Removes obsolete server credentials and routing state from every
     /// container used by previous app versions. Safe to call on every launch.
-    public static func clearLegacyLanConfiguration() {
+    public static func clearLegacyLanConfiguration() throws {
         let defaultsStores = [UserDefaults.standard]
             + ([appGroupID] + legacyAppGroupIDs).compactMap(UserDefaults.init(suiteName:))
 
         for store in defaultsStores {
-            for key in legacyLanDefaultsKeys {
-                store.removeObject(forKey: key)
-            }
             sanitizeAppSettings(in: store)
-            store.synchronize()
         }
 
         let fileManager = FileManager.default
-        for groupID in [appGroupID] + legacyAppGroupIDs {
-            guard let container = fileManager.containerURL(
+        let containers = ([appGroupID] + legacyAppGroupIDs).compactMap { groupID in
+            fileManager.containerURL(
                 forSecurityApplicationGroupIdentifier: groupID
-            ) else { continue }
-            for filename in legacyLanFilenames {
-                try? fileManager.removeItem(
-                    at: container.appendingPathComponent(filename, isDirectory: false)
-                )
-            }
+            )
         }
+        try LegacyLanCleaner.clean(
+            defaultsStores: defaultsStores,
+            defaultsKeys: legacyLanDefaultsKeys,
+            containerDirectories: containers,
+            filenames: legacyLanFilenames,
+            fileManager: fileManager
+        )
     }
 
     private static func sanitizeAppSettings(in defaults: UserDefaults) {

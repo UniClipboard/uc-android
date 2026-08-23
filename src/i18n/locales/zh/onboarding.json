@@ -12,14 +12,6 @@
     "body": "这台设备现在可以通过空间安全同步剪贴板。",
     "enter": "进入"
   },
-  "migration": {
-    "title": "同步方式已升级",
-    "body": "UniClip v2 从局域网同步升级为端到端加密同步。即使设备不在同一个网络，也能安全同步。",
-    "historyKept": "本地剪贴板历史仍然保留",
-    "repairReason": "为了建立新的安全连接，需要与电脑重新配对一次。",
-    "desktopHint": "请先在电脑端打开“我的空间”并生成邀请码。",
-    "join": "开始重新配对"
-  },
   "welcome": {
     "wordmark": "UniClip",
     "title": "把剪贴板\n接到每一台设备",

@@ -9,7 +9,7 @@ import type { PostHogCustomStorage, PostHogOptions } from 'posthog-react-native'
 type BeforeSend = Exclude<PostHogOptions['before_send'], unknown[] | undefined>;
 type BeforeSendEvent = NonNullable<Parameters<BeforeSend>[0]>;
 
-const SAFE_SCREEN_NAMES = new Set(['Onboarding', 'Migration', 'Main', 'Settings', 'SettingsSub']);
+const SAFE_SCREEN_NAMES = new Set(['Onboarding', 'Main', 'Settings', 'SettingsSub']);
 const FORBIDDEN_KEYS = new Set([
   'clipboard',
   'clipboard_content',

@@ -15,7 +15,11 @@ let package = Package(
     .target(
       name: "OutboundShareHandoffCore",
       path: "ios/Shared",
-      sources: ["OutboundShareHandoff.swift", "ShareDiagnostics.swift"]
+      sources: [
+        "LegacyContainerMigrator.swift",
+        "OutboundShareHandoff.swift",
+        "ShareDiagnostics.swift",
+      ]
     ),
     .testTarget(
       name: "OutboundShareHandoffCoreTests",

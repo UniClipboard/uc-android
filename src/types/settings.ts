@@ -44,9 +44,6 @@ export interface SharedSettings {
   // iOS keyboard extension (consumed by the native keyboard via App Group)
   keyboardSoundFeedback: boolean;
   keyboardHapticFeedback: boolean;
-
-  /** One-time recovery state for users upgraded from the removed LAN connection flow. */
-  legacyPairingGuide: 'none' | 'pending';
 }
 
 export type ClipboardAccessMethod = 'overlay-polling' | 'overlay-event' | 'shizuku';
@@ -110,8 +107,6 @@ export const SHARED_DEFAULTS: SharedSettings = {
 
   keyboardSoundFeedback: true,
   keyboardHapticFeedback: true,
-
-  legacyPairingGuide: 'none',
 };
 
 export const ANDROID_DEFAULTS: AndroidSettings = {
@@ -161,4 +156,4 @@ export const RUNTIME_STATE_DEFAULTS: RuntimeState = {
   needsHistoryReorganize: false,
 };
 
-export const SETTINGS_SCHEMA_VERSION = 11;
+export const SETTINGS_SCHEMA_VERSION = 12;

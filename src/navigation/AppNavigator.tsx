@@ -14,9 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { navigationRef, flushPendingNavigation } from './navigationRef';
 import { useTheme } from '@/hooks/useTheme';
 import { useSettingsStore } from '@/stores';
-import { useSpaceSetupCompletionStore, useUnifiedSpaceStore } from '@/features/space';
+import { useSpaceSetupCompletionStore } from '@/features/space';
 import { HomeView } from '@/screens/HomeView';
-import { LegacyPairingGuide } from '@/screens/LegacyPairingGuide';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { SettingsSubScreen } from '@/screens/settings/SettingsSubScreen';
@@ -28,7 +27,7 @@ import { useSettingsScreenOptions } from './useSettingsScreenOptions';
 export type { RootStackParamList, SettingsSubSection } from './AppNavigator.types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-type SetupSession = 'onboarding' | 'migration';
+type SetupSession = 'onboarding';
 const CompleteSetupSessionContext = createContext<() => void>(() => undefined);
 
 function MainScreen() {
@@ -43,20 +42,6 @@ function MainScreen() {
     [navigation]
   );
   return <HomeView onOpenSettings={openSettings} onOpenAbout={openAbout} />;
-}
-
-function MigrationGuideGate() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Migration'>>();
-  const updateConfig = useSettingsStore((s) => s.updateConfig);
-  const completeSetupSession = useContext(CompleteSetupSessionContext);
-  const onComplete = useCallback(async () => {
-    const result = await updateConfig({ legacyPairingGuide: 'none' });
-    if (!result.ok) return false;
-    completeSetupSession();
-    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
-    return true;
-  }, [completeSetupSession, navigation, updateConfig]);
-  return <LegacyPairingGuide onComplete={onComplete} />;
 }
 
 function OnboardingGate() {
@@ -74,23 +59,11 @@ export const AppNavigator = () => {
   const { t } = useTranslation('home');
   const settingsOptions = useSettingsScreenOptions();
   const config = useSettingsStore((s) => s.config);
-  const updateConfig = useSettingsStore((s) => s.updateConfig);
-  const spaceStatus = useUnifiedSpaceStore((s) => s.status);
   const completionStatus = useSpaceSetupCompletionStore((s) => s.status);
   const [setupSession, setSetupSession] = useState<SetupSession | null>(null);
 
-  useEffect(() => {
-    if (config && spaceStatus === 'ready' && config.legacyPairingGuide === 'pending') {
-      void updateConfig({ legacyPairingGuide: 'none' });
-    }
-  }, [config?.legacyPairingGuide, spaceStatus, updateConfig]);
-
   const requestedSetup: SetupSession | null =
-    config && completionStatus === 'incomplete'
-      ? config.legacyPairingGuide === 'pending'
-        ? 'migration'
-        : 'onboarding'
-      : null;
+    config?.syncChannel === 'p2p' && completionStatus === 'incomplete' ? 'onboarding' : null;
 
   useEffect(() => {
     if (!setupSession && requestedSetup) setSetupSession(requestedSetup);
@@ -98,8 +71,7 @@ export const AppNavigator = () => {
 
   const activeSetup = setupSession ?? requestedSetup;
   const rootMode = activeSetup ?? 'main';
-  const initialRouteName =
-    rootMode === 'migration' ? 'Migration' : rootMode === 'onboarding' ? 'Onboarding' : 'Main';
+  const initialRouteName = rootMode === 'onboarding' ? 'Onboarding' : 'Main';
 
   const captureCurrentScreen = useCallback(() => {
     const screenName = (navigationRef.getCurrentRoute() as { name?: string } | undefined)?.name;
@@ -148,7 +120,7 @@ export const AppNavigator = () => {
         },
       };
 
-  if (!config || completionStatus === 'unknown') {
+  if (!config || (config.syncChannel === 'p2p' && completionStatus === 'unknown')) {
     return <View style={[styles.loading, { backgroundColor: theme.colors.background }]} />;
   }
 
@@ -163,7 +135,6 @@ export const AppNavigator = () => {
       >
         <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Onboarding" component={OnboardingGate} />
-          <Stack.Screen name="Migration" component={MigrationGuideGate} />
           <Stack.Screen name="Main" component={MainScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={settingsOptions} />
           <Stack.Screen

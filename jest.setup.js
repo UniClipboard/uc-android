@@ -25,6 +25,13 @@ jest.mock('expo-application', () => ({
   nativeApplicationVersion: '1.0.0',
 }));
 
+jest.mock('expo-secure-store', () => ({
+  AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'after-first-unlock-this-device-only',
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
 // expo-localization 会拉入 expo-modules-core(在 node 测试环境下缺 EventEmitter 而抛错)。
 // 直接 mock 掉,返回一个 zh 设备语言,使 i18n 初始化为 zh-CN(与测试对基准中文文案的断言一致)。
 jest.mock('expo-localization', () => ({
@@ -185,6 +192,7 @@ jest.mock('@react-native-community/netinfo', () => ({
 jest.mock('app-group-store', () => ({
   saveSettings: jest.fn().mockResolvedValue(undefined),
   getSettings: jest.fn().mockResolvedValue({}),
+  getLegacyLanConfiguration: jest.fn().mockResolvedValue(null),
   clearLegacyLanConfiguration: jest.fn().mockResolvedValue(undefined),
   getContainerUrl: jest.fn().mockResolvedValue(null),
   getLegacyHistory: jest.fn().mockResolvedValue(null),

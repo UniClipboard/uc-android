@@ -12,14 +12,6 @@
     "body": "Este dispositivo agora pode sincronizar sua área de transferência com segurança pelo espaço.",
     "enter": "Entrar"
   },
-  "migration": {
-    "title": "A sincronização foi atualizada",
-    "body": "O UniClip v2 evoluiu da sincronização em rede local para a sincronização com criptografia de ponta a ponta. Seus dispositivos agora sincronizam com segurança em redes diferentes.",
-    "historyKept": "Seu histórico local da área de transferência foi mantido",
-    "repairReason": "Para criar a nova conexão segura, pareie novamente com o computador uma vez.",
-    "desktopHint": "No computador, abra Meu espaço e gere um código de convite.",
-    "join": "Iniciar novo pareamento"
-  },
   "welcome": {
     "wordmark": "UniClip",
     "title": "A área de transferência\nem cada dispositivo",

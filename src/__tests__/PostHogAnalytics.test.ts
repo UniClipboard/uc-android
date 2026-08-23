@@ -95,7 +95,7 @@ describe('React Native PostHog analytics', () => {
     ).toEqual({ $app_version: '1.3.0', $os_name: 'iOS' });
   });
 
-  it.each(['Onboarding', 'Migration', 'Main', 'Settings', 'SettingsSub'])(
+  it.each(['Onboarding', 'Main', 'Settings', 'SettingsSub'])(
     'allows the static %s screen name',
     (screenName) => {
       const event = { event: '$screen', properties: { $screen_name: screenName } };

@@ -17,6 +17,21 @@ describe('app-group-store JS wrapper', () => {
     const mockNativeModule = {
       saveSettings: jest.fn().mockResolvedValue(undefined),
       getSettings: jest.fn().mockResolvedValue(JSON.stringify(settings)),
+      getLegacyLanConfiguration: jest.fn().mockResolvedValue(
+        JSON.stringify({
+          servers: [
+            {
+              id: 'home',
+              name: 'Home',
+              urls: ['http://192.168.1.8:5033'],
+              username: 'mobile',
+              password: 'secret',
+            },
+          ],
+          activeServerIndex: 0,
+          trustInsecureCert: true,
+        })
+      ),
       clearLegacyLanConfiguration: jest.fn().mockResolvedValue(undefined),
       getShareDiagnostics: jest.fn().mockResolvedValue(
         JSON.stringify({
@@ -51,6 +66,19 @@ describe('app-group-store JS wrapper', () => {
 
     expect(mockNativeModule.saveSettings).toHaveBeenCalledWith(JSON.stringify(settings));
     await expect(store.getSettings()).resolves.toEqual(settings);
+    await expect(store.getLegacyLanConfiguration()).resolves.toEqual({
+      servers: [
+        {
+          id: 'home',
+          name: 'Home',
+          urls: ['http://192.168.1.8:5033'],
+          username: 'mobile',
+          password: 'secret',
+        },
+      ],
+      activeServerIndex: 0,
+      trustInsecureCert: true,
+    });
     await expect(store.getShareDiagnostics()).resolves.toEqual({
       schemaVersion: 1,
       attempts: [{ id: 'attempt-a', itemKind: 'file', byteCount: 42, events: [] }],
@@ -105,6 +133,7 @@ describe('app-group-store JS wrapper', () => {
     await expect(store.saveSettings({})).resolves.toBeUndefined();
     await expect(store.clearLegacyLanConfiguration()).resolves.toBeUndefined();
     await expect(store.getSettings()).resolves.toEqual({});
+    await expect(store.getLegacyLanConfiguration()).resolves.toBeNull();
     await expect(store.getContainerUrl()).resolves.toBeNull();
     await expect(store.getLegacyHistory()).resolves.toBeNull();
     await expect(store.getShareDiagnostics()).resolves.toBeNull();

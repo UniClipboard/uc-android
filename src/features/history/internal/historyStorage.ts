@@ -327,15 +327,11 @@ export class HistoryStorage {
   }
 
   /**
-   * 一次性迁移:旧 AsyncStorage 的 @syncclipboard:history → SQLite。
-   * DB 非空即视为已迁移,跳过。复用现有 MIGRATIONS + normalize + dedupe。
-   * 旧 JSON 保留(回滚保险),不删除。
+   * 可恢复迁移:旧 AsyncStorage 的 @syncclipboard:history → SQLite。
+   * 每次只补 SQLite 缺失的 hash；现有行(包括删除标记)始终优先。
+   * 旧 JSON 保留作回滚保险,批次中断后下次启动继续补齐。
    */
   private async migrateFromAsyncStorageOnce(): Promise<void> {
-    if (!(await historyRepository.isEmpty())) {
-      return;
-    }
-
     const historyJson = await AsyncStorage.getItem(STORAGE_KEYS.HISTORY);
     if (!historyJson) {
       // 全新安装,无旧数据
@@ -358,10 +354,15 @@ export class HistoryStorage {
 
       // 自愈:去重(同 profileHash 大小写不敏感),避免网格 key 冲突
       const { items: deduped, removed } = this.dedupeByProfileHash(items);
+      const existing = await historyRepository.getAll(this.sortConfig, { includeDeleted: true });
+      const existingHashes = new Set(existing.map(({ profileHash }) => profileHash.toLowerCase()));
+      const missing = deduped.filter(
+        ({ profileHash }) => !existingHashes.has(profileHash.toLowerCase())
+      );
 
-      await historyRepository.replaceMany(deduped);
+      await historyRepository.replaceMany(missing);
       log.info(
-        `Migrated ${deduped.length} items from AsyncStorage to SQLite (removed ${removed} duplicates)`
+        `Merged ${missing.length} missing AsyncStorage items into SQLite (kept ${existing.length} existing rows, removed ${removed} duplicates)`
       );
 
       // 保留旧 JSON 作回滚,仅更新版本号

@@ -12,14 +12,6 @@
     "body": "This device can now sync your clipboard securely through the space.",
     "enter": "Enter"
   },
-  "migration": {
-    "title": "Syncing has been upgraded",
-    "body": "UniClip v2 upgrades LAN sync to end-to-end encrypted sync. Your devices can now sync securely across different networks.",
-    "historyKept": "Your local clipboard history is still here",
-    "repairReason": "To establish the new secure connection, pair with your computer again once.",
-    "desktopHint": "On your computer, open My Space and generate an invitation code.",
-    "join": "Start re-pairing"
-  },
   "welcome": {
     "wordmark": "UniClip",
     "title": "Your clipboard,\non every device",

@@ -1,13 +1,7 @@
 import * as Crypto from 'expo-crypto';
-import * as SecureStore from 'expo-secure-store';
 import { configStorage } from '@/features/settings';
 import { configureLanServerService } from './internal/lanServerService';
-
-const SECRET_PREFIX = 'uniclip.lan.server.';
-const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
-  keychainService: 'app.uniclipboard.lan-servers',
-  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-};
+import { lanServerSecretStore } from './secureStorage';
 
 export function configureProductionLanServerService(): void {
   configureLanServerService({
@@ -26,14 +20,7 @@ export function configureProductionLanServerService(): void {
         });
       },
     },
-    secrets: {
-      get: (serverId) =>
-        SecureStore.getItemAsync(`${SECRET_PREFIX}${serverId}`, SECURE_STORE_OPTIONS),
-      set: (serverId, password) =>
-        SecureStore.setItemAsync(`${SECRET_PREFIX}${serverId}`, password, SECURE_STORE_OPTIONS),
-      delete: (serverId) =>
-        SecureStore.deleteItemAsync(`${SECRET_PREFIX}${serverId}`, SECURE_STORE_OPTIONS),
-    },
+    secrets: lanServerSecretStore,
     createId: () => Crypto.randomUUID(),
   });
 }
