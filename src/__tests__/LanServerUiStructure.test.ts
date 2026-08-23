@@ -88,6 +88,12 @@ describe('LAN server UI ownership', () => {
     expect(editor).toContain('editor.probeResults');
   });
 
+  it('opens the Android server editor directly at full height', () => {
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
+
+    expect(editor).toMatch(/<ModalBottomSheet\s+skipPartiallyExpanded\s+onDismissRequest=/);
+  });
+
   it('wraps Android text-field labels and placeholders in Compose text', () => {
     const field = source('src/components/ui/AppTextField.android.tsx');
 

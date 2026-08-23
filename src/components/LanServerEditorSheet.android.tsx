@@ -50,7 +50,7 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
 
   return (
     <>
-      <ModalBottomSheet onDismissRequest={props.onClose}>
+      <ModalBottomSheet skipPartiallyExpanded onDismissRequest={props.onClose}>
         <Column modifiers={[fillMaxWidth(), padding(24, 8, 24, 24), verticalScroll()]}>
           <ComposeText style={TITLE_STYLE}>
             {props.serverId ? t('lan.edit') : t('lan.add')}
