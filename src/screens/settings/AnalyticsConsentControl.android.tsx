@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import {
   HorizontalDivider,
+  Icon,
   ListItem,
   Switch as ComposeSwitch,
   Text as ComposeText,
   TextButton,
+  useMaterialColors,
 } from '@expo/ui/jetpack-compose';
 import { useTranslation } from 'react-i18next';
 
@@ -17,8 +19,14 @@ import {
 import { SettingsSectionItem } from './SettingsSectionItem';
 import type { AnalyticsConsentControlProps } from './AnalyticsConsentControl.types';
 
+const ICONS = {
+  analytics: require('../../assets/icons/analytics.xml'),
+  reset: require('../../assets/icons/restart_alt.xml'),
+};
+
 export function AnalyticsConsentControl(_: AnalyticsConsentControlProps) {
   const { t } = useTranslation('settings');
+  const colors = useMaterialColors();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -70,6 +78,9 @@ export function AnalyticsConsentControl(_: AnalyticsConsentControlProps) {
   return (
     <SettingsSectionItem title={t('analytics.sectionTitle')} footer={t('analytics.footer')}>
       <ListItem>
+        <ListItem.LeadingContent>
+          <Icon source={ICONS.analytics} size={22} tint={colors.primary} />
+        </ListItem.LeadingContent>
         <ListItem.HeadlineContent>
           <ComposeText>{t('analytics.consentTitle')}</ComposeText>
         </ListItem.HeadlineContent>
@@ -86,6 +97,9 @@ export function AnalyticsConsentControl(_: AnalyticsConsentControlProps) {
       </ListItem>
       <HorizontalDivider />
       <ListItem>
+        <ListItem.LeadingContent>
+          <Icon source={ICONS.reset} size={22} tint={colors.error} />
+        </ListItem.LeadingContent>
         <ListItem.HeadlineContent>
           <ComposeText>{t('analytics.resetTitle')}</ComposeText>
         </ListItem.HeadlineContent>

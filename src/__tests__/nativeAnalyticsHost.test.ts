@@ -138,9 +138,14 @@ describe('native Engine analytics hosts', () => {
     expect(android).toContain("from '@expo/ui/jetpack-compose'");
     expect(android).toContain('setAnalyticsConsent');
     expect(android).toContain('resetAnalyticsIdentity');
+    expect(android).toContain('source={ICONS.analytics}');
+    expect(android).toContain('source={ICONS.reset}');
+    expect(android.match(/<ListItem.LeadingContent>/g)).toHaveLength(2);
     expect(ios).toContain("from '@expo/ui/swift-ui'");
     expect(ios).toContain('setAnalyticsConsent');
     expect(ios).toContain('resetAnalyticsIdentity');
+    expect(ios).toContain('systemName="chart.bar"');
+    expect(ios).toContain('systemName="arrow.counterclockwise"');
   });
 
   it('exposes one native analytics state for the React Native client', () => {
