@@ -6,7 +6,6 @@ import {
   Icon,
   IconButton,
   LazyColumn,
-  PullToRefreshBox,
   Row,
   Spacer,
   Text as ComposeText,
@@ -28,6 +27,7 @@ import type { MySpaceLayoutProps } from './MySpaceLayout.types';
 
 const ADD_ICON = require('../assets/icons/add.xml');
 const TITLE_STYLE = { fontSize: 20, fontWeight: '600' } as const;
+type AndroidMySpaceLayoutProps = Omit<MySpaceLayoutProps, 'isRefreshing' | 'onRefresh'>;
 
 export function MySpaceLayout({
   visible,
@@ -37,14 +37,12 @@ export function MySpaceLayout({
   onAction,
   actionPending,
   actionEnabled,
-  isRefreshing,
-  onRefresh,
   contentHeight = 320,
   children,
   supplementary,
-}: MySpaceLayoutProps) {
+}: AndroidMySpaceLayoutProps) {
   const { theme } = useTheme();
-  const safeContentHeight = Math.min(Math.max(contentHeight, 216), 520);
+  const safeContentHeight = Math.min(Math.max(contentHeight, 112), 520);
 
   return (
     <AppBottomSheet visible={visible} onDismiss={onClose}>
@@ -60,8 +58,6 @@ export function MySpaceLayout({
           onAction={onAction}
           actionPending={actionPending}
           actionEnabled={actionEnabled}
-          isRefreshing={isRefreshing}
-          onRefresh={onRefresh}
           contentHeight={safeContentHeight}
         >
           {children}
@@ -78,12 +74,10 @@ function MySpaceLayoutContent({
   onAction,
   actionPending,
   actionEnabled,
-  isRefreshing,
-  onRefresh,
   contentHeight,
   children,
 }: Omit<
-  MySpaceLayoutProps,
+  AndroidMySpaceLayoutProps,
   'visible' | 'onClose' | 'prefersLarge' | 'supplementary' | 'contentHeight'
 > & { contentHeight: number }) {
   const colors = useMaterialColors();
@@ -107,18 +101,12 @@ function MySpaceLayoutContent({
           )}
         </IconButton>
       </Row>
-      <PullToRefreshBox
-        isRefreshing={isRefreshing}
-        onRefresh={() => void onRefresh()}
+      <LazyColumn
+        contentPadding={{ start: 12, end: 12, bottom: 20 }}
         modifiers={[fillMaxWidth(), height(contentHeight)]}
       >
-        <LazyColumn
-          contentPadding={{ start: 12, end: 12, bottom: 20 }}
-          modifiers={[fillMaxWidth(), height(contentHeight)]}
-        >
-          {children}
-        </LazyColumn>
-      </PullToRefreshBox>
+        {children}
+      </LazyColumn>
     </Column>
   );
 }

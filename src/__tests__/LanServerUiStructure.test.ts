@@ -94,6 +94,88 @@ describe('LAN server UI ownership', () => {
     expect(editor).toMatch(/<ModalBottomSheet\s+skipPartiallyExpanded\s+onDismissRequest=/);
   });
 
+  it('keeps Android server save and connection testing outside the scrolling form', () => {
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
+    const scrollForm = editor.indexOf('<EditorForm');
+    const footer = editor.indexOf('<EditorFooter');
+
+    expect(scrollForm).toBeGreaterThan(0);
+    expect(footer).toBeGreaterThan(scrollForm);
+    expect(editor).toContain('requestClose');
+    expect(editor).toContain("t('lan.discardAction')");
+    expect(editor).toContain('imePadding()');
+  });
+
+  it('uses a fixed Android editor header before the scrolling form', () => {
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
+    const header = editor.indexOf('<EditorHeader');
+    const form = editor.indexOf('<EditorForm');
+
+    expect(header).toBeGreaterThan(0);
+    expect(form).toBeGreaterThan(header);
+    expect(editor).toContain('onClose={requestClose}');
+    expect(editor).toContain('source={ICONS.close}');
+    expect(editor).toContain("contentDescription={t('action.close', { ns: 'common' })}");
+  });
+
+  it('groups the Android form into connection, credentials, and security sections', () => {
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
+
+    expect(editor).toContain("t('lan.connectionInfo')");
+    expect(editor).toContain("t('lan.credentials')");
+    expect(editor).toContain("t('lan.security')");
+    expect(editor).toContain('source={ICONS.qr}');
+    expect(editor).not.toContain('<TextButton onClick={onClose}');
+    expect(editor).not.toContain("t('lan.serverActions')");
+  });
+
+  it('never leaves Android editor setting rows as bare rectangular list items', () => {
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
+    const security = editor.match(/function SecurityControl[\s\S]*?function ProbeResults/)?.[0];
+
+    expect(editor).toContain('const EDITOR_GROUP_SHAPE = Shape.RoundedCorner');
+    expect(security).toContain('<Surface');
+    expect(security).toContain('shape={EDITOR_GROUP_SHAPE}');
+    expect(security).toContain('border={{ color: colors.outlineVariant }}');
+    expect(security).toContain('verticalAlignment="center"');
+    expect(editor).toContain('<ProbeResults editor={editor} />');
+  });
+
+  it('keeps Test in the form and gives Delete and Save equal footer widths', () => {
+    const editor = source('src/components/LanServerEditorSheet.android.tsx');
+    const form = editor.match(/function EditorForm[\s\S]*?function EditorFooter/)?.[0];
+    const footer = editor.match(/function EditorFooter[\s\S]*$/)?.[0];
+    const deleteAction = footer?.indexOf('source={ICONS.delete}') ?? -1;
+    const saveAction = footer?.indexOf("t('action.save', { ns: 'common' })") ?? -1;
+
+    expect(form).toContain("t('lan.probe.test')");
+    expect(form).toContain('onClick={() => void editor.probe()}');
+    expect(footer).not.toContain("t('lan.probe.test')");
+    expect(footer).toContain('<Row');
+    expect(footer).toContain('<OutlinedButton');
+    expect(footer).toContain('<Button');
+    expect(footer?.match(/modifiers=\{\[weight\(1\)\]\}/g)).toHaveLength(2);
+    expect(deleteAction).toBeGreaterThan(0);
+    expect(saveAction).toBeGreaterThan(deleteAction);
+    expect(footer).toContain('serverId ? (');
+  });
+
+  it.each(['zh', 'en', 'ru', 'pt-BR'])(
+    'provides %s Android server editor section labels',
+    (locale) => {
+      const messages = JSON.parse(source(`src/i18n/locales/${locale}/settingsSync.json`)) as {
+        lan?: Record<string, unknown>;
+      };
+
+      expect(messages.lan).toEqual(
+        expect.objectContaining({
+          connectionInfo: expect.any(String),
+          security: expect.any(String),
+        })
+      );
+    }
+  );
+
   it('wraps Android text-field labels and placeholders in Compose text', () => {
     const field = source('src/components/ui/AppTextField.android.tsx');
 
@@ -102,7 +184,11 @@ describe('LAN server UI ownership', () => {
     expect(field).toContain('nativeValue.set(value)');
     expect(field).toContain('if (value === latestNativeValue.current) return;');
     expect(field).toContain('onValueChange={handleValueChange}');
-    expect(field).toContain("visualTransformation={secure ? 'password' : undefined}");
+    expect(field).toContain(
+      "visualTransformation={secure && !secureVisible ? 'password' : undefined}"
+    );
+    expect(field).toContain('secureToggleLabel');
+    expect(field).toContain('tint={colors.onSurfaceVariant}');
     expect(field).not.toContain('<OutlinedTextField.Label>{label}</OutlinedTextField.Label>');
     expect(field).not.toContain(
       '<OutlinedTextField.Placeholder>{placeholder}</OutlinedTextField.Placeholder>'

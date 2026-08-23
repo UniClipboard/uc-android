@@ -1,7 +1,19 @@
-import { OutlinedTextField, Text, useNativeState } from '@expo/ui/jetpack-compose';
+import {
+  Icon,
+  IconButton,
+  OutlinedTextField,
+  Text,
+  useMaterialColors,
+  useNativeState,
+} from '@expo/ui/jetpack-compose';
 import type { TextFieldKeyboardType, TextFieldColors } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+const ICONS = {
+  visibility: require('../../assets/icons/visibility.xml'),
+  visibilityOff: require('../../assets/icons/visibility_off.xml'),
+};
 
 export interface AppTextFieldProps {
   value: string;
@@ -10,6 +22,8 @@ export interface AppTextFieldProps {
   label?: string;
   disabled?: boolean;
   secure?: boolean;
+  secureToggleLabel?: string;
+  secureHideLabel?: string;
   keyboardType?: TextFieldKeyboardType;
   fullWidth?: boolean;
   colors?: TextFieldColors;
@@ -22,11 +36,15 @@ export function AppTextField({
   label,
   disabled,
   secure,
+  secureToggleLabel,
+  secureHideLabel,
   keyboardType,
   fullWidth,
-  colors,
+  colors: fieldColors,
 }: AppTextFieldProps) {
+  const colors = useMaterialColors();
   const nativeValue = useNativeState(value);
+  const [secureVisible, setSecureVisible] = useState(false);
   const latestNativeValue = useRef(value);
   useEffect(() => {
     if (value === latestNativeValue.current) return;
@@ -47,9 +65,9 @@ export function AppTextField({
       onValueChange={handleValueChange}
       enabled={disabled !== undefined ? !disabled : undefined}
       singleLine
-      visualTransformation={secure ? 'password' : undefined}
+      visualTransformation={secure && !secureVisible ? 'password' : undefined}
       keyboardOptions={{ keyboardType: secure ? 'password' : keyboardType }}
-      colors={colors}
+      colors={fieldColors}
       modifiers={fullWidth ? [fillMaxWidth()] : undefined}
     >
       {label ? (
@@ -61,6 +79,20 @@ export function AppTextField({
         <OutlinedTextField.Placeholder>
           <Text>{placeholder}</Text>
         </OutlinedTextField.Placeholder>
+      ) : null}
+      {secure && secureToggleLabel ? (
+        <OutlinedTextField.TrailingIcon>
+          <IconButton onClick={() => setSecureVisible((visible) => !visible)}>
+            <Icon
+              source={secureVisible ? ICONS.visibilityOff : ICONS.visibility}
+              size={20}
+              tint={colors.onSurfaceVariant}
+              contentDescription={
+                secureVisible ? secureHideLabel ?? secureToggleLabel : secureToggleLabel
+              }
+            />
+          </IconButton>
+        </OutlinedTextField.TrailingIcon>
       ) : null}
     </OutlinedTextField>
   );

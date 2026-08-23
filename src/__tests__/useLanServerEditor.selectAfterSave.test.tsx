@@ -102,4 +102,16 @@ describe('useLanServerEditor select-after-save policy', () => {
     expect(mockSelect).not.toHaveBeenCalled();
     expect(mockLoadConfig).toHaveBeenCalledTimes(1);
   });
+
+  it('only marks the editor dirty after the user changes a field', () => {
+    act(() => {
+      renderer = TestRenderer.create(<Harness />);
+    });
+
+    expect(current.isDirty).toBe(false);
+
+    act(() => current.setName('Changed name'));
+
+    expect(current.isDirty).toBe(true);
+  });
 });

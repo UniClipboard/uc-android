@@ -13,6 +13,22 @@ export interface UseLanServerEditorOptions {
   onFinished(): void;
 }
 
+interface EditorSnapshot {
+  name: string;
+  urls: string[];
+  username: string;
+  password: string;
+  allowInsecureTls: boolean;
+}
+
+const EMPTY_SNAPSHOT: EditorSnapshot = {
+  name: '',
+  urls: [''],
+  username: '',
+  password: '',
+  allowInsecureTls: false,
+};
+
 export function useLanServerEditor({
   visible,
   serverId,
@@ -33,6 +49,7 @@ export function useLanServerEditor({
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [initialSnapshot, setInitialSnapshot] = useState<EditorSnapshot>(EMPTY_SNAPSHOT);
 
   const applyIntent = useCallback((intent: LanConnectIntent) => {
     setUrls(intent.urls.length > 0 ? intent.urls : ['']);
@@ -60,12 +77,20 @@ export function useLanServerEditor({
           setUsername(draft.username);
           setPassword(draft.password);
           setAllowInsecureTls(draft.allowInsecureTls);
+          setInitialSnapshot({
+            name: draft.name,
+            urls: draft.urls.length > 0 ? draft.urls : [''],
+            username: draft.username,
+            password: draft.password,
+            allowInsecureTls: draft.allowInsecureTls,
+          });
         } else {
           setName('');
           setUrls(['']);
           setUsername('');
           setPassword('');
           setAllowInsecureTls(false);
+          setInitialSnapshot(EMPTY_SNAPSHOT);
         }
         if (initialIntent && !cancelled) applyIntent(initialIntent);
       } catch (caught) {
@@ -189,6 +214,17 @@ export function useLanServerEditor({
     () => urls.some((url) => url.trim()) && Boolean(username.trim()) && password.length > 0,
     [password.length, urls, username]
   );
+  const isDirty = useMemo(
+    () =>
+      !pending &&
+      (name !== initialSnapshot.name ||
+        username !== initialSnapshot.username ||
+        password !== initialSnapshot.password ||
+        allowInsecureTls !== initialSnapshot.allowInsecureTls ||
+        urls.length !== initialSnapshot.urls.length ||
+        urls.some((url, index) => url !== initialSnapshot.urls[index])),
+    [allowInsecureTls, initialSnapshot, name, password, pending, urls, username]
+  );
   const preferredProbeUrl = useMemo(() => {
     if (!probeResults) return null;
     return (
@@ -218,6 +254,7 @@ export function useLanServerEditor({
     preferredProbeUrl,
     error,
     canSave,
+    isDirty,
     isActive: serverId !== null && serverId === activeServerId,
     applyIntent,
     openScanner,

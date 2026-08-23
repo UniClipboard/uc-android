@@ -17,6 +17,7 @@ const mySpaceLayouts = ['android', 'ios'].map((platform) =>
 const p2pMySpaceContents = ['android', 'ios'].map((platform) =>
   read(`components/P2pMySpaceContent.${platform}.tsx`)
 );
+const lanMySpaceAndroid = read('components/LanMySpaceContent.android.tsx');
 const mySpaceSheetTypes = read('components/MySpaceSheet.types.ts');
 const mySpaceSheetHook = read('components/useMySpaceSheet.ts');
 
@@ -135,6 +136,44 @@ describe('home My Space sheet', () => {
     expect(p2pMySpaceContents[0]).toContain('border={{ color: colors.outlineVariant }}');
   });
 
+  it('keeps a one-server Android LAN sheet compact instead of reserving a tall empty list', () => {
+    expect(mySpaceLayouts[0]).toContain('Math.max(contentHeight, 112)');
+    expect(lanMySpaceAndroid).toContain('const sectionCount =');
+    expect(lanMySpaceAndroid).toContain(
+      'servers.length * 88 + sectionCount * 24 + Math.max(sectionCount - 1, 0) * 12 + 20'
+    );
+    expect(lanMySpaceAndroid).not.toContain('servers.length * 80 + 144');
+    expect(lanMySpaceAndroid).not.toContain(', 240)');
+  });
+
+  it('groups Android LAN server rows in rounded surfaces with consistent dividers', () => {
+    expect(lanMySpaceAndroid).toContain('const SERVER_LIST_SHAPE = Shape.RoundedCorner');
+    expect(lanMySpaceAndroid).toContain('<Surface');
+    expect(lanMySpaceAndroid).toContain('shape={SERVER_LIST_SHAPE}');
+    expect(lanMySpaceAndroid).toContain('<HorizontalDivider');
+    expect(lanMySpaceAndroid).toContain('border={{ color: colors.outlineVariant }}');
+  });
+
+  it('centers Android LAN status and current-selection icons within the full server row', () => {
+    const serverRow = lanMySpaceAndroid.match(
+      /function LanServerRow[\s\S]*?\n}\n\nfunction statusLabel/
+    )?.[0];
+
+    expect(serverRow).toContain('verticalAlignment="center"');
+    expect(serverRow).toContain(
+      'modifiers={[fillMaxWidth(), clickable(onPress), padding(16, 12, 16, 12)]}'
+    );
+    expect(serverRow).toContain('<Column modifiers={[weight(1)]}>');
+    expect(serverRow).not.toContain('<ListItem.LeadingContent>');
+    expect(serverRow).not.toContain('<ListItem.TrailingContent>');
+  });
+
+  it('does not mount pull-to-refresh UI in the Android My Space sheet', () => {
+    expect(mySpaceLayouts[0]).not.toContain('PullToRefreshBox');
+    expect(mySpaceLayouts[0]).not.toContain('isRefreshing={isRefreshing}');
+    expect(mySpaceLayouts[0]).not.toContain('onRefresh={() => void onRefresh()}');
+  });
+
   it('draws Android device dividers at one consistent color across the full row', () => {
     const androidDivider = p2pMySpaceContents[0].match(/<HorizontalDivider[\s\S]*?\/>/)?.[0];
 
@@ -168,12 +207,16 @@ describe('home My Space sheet', () => {
     expect(mySpaceSheetHook).toContain('getUnifiedSpaceService().refresh()');
   });
 
-  it('uses native pull-to-refresh on both platforms bound only to user requests', () => {
-    expect(mySpaceLayouts[0]).toContain('PullToRefreshBox');
-    expect(p2pMySpaceContents[0]).toContain('isRefreshing={isUserRefreshing}');
-    expect(p2pMySpaceContents[0]).toContain('onRefresh={refresh}');
+  it('keeps pull-to-refresh only on the iOS My Space presentation', () => {
+    expect(mySpaceLayouts[0]).not.toContain('PullToRefreshBox');
     expect(mySpaceLayouts[1]).toContain('refreshable(');
     expect(p2pMySpaceContents[1]).toContain('onRefresh={refresh}');
+  });
+
+  it('uses the Android theme foreground color for LAN server names', () => {
+    expect(lanMySpaceAndroid).toContain(
+      '<ComposeText color={colors.onSurface}>{server.name}</ComposeText>'
+    );
   });
 
   it('keeps loading, error, empty, and row states mutually exclusive on both platforms', () => {

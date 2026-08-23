@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import {
   Column,
+  HorizontalDivider,
   Icon,
   ListItem,
+  Row,
+  Shape,
+  Spacer,
+  Surface,
   Text as ComposeText,
   useMaterialColors,
 } from '@expo/ui/jetpack-compose';
-import { clickable } from '@expo/ui/jetpack-compose/modifiers';
+import {
+  clickable,
+  fillMaxWidth,
+  height,
+  padding,
+  weight,
+  width,
+} from '@expo/ui/jetpack-compose/modifiers';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -26,11 +38,14 @@ const ICONS = {
   status: require('../assets/icons/circle.xml'),
 };
 const SECTION_STYLE = { fontSize: 13, fontWeight: '600', letterSpacing: 0 } as const;
+const SERVER_LIST_SHAPE = Shape.RoundedCorner({
+  cornerRadii: { topStart: 16, topEnd: 16, bottomStart: 16, bottomEnd: 16 },
+});
 
 export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
   const { t } = useTranslation(['home', 'settings', 'settingsSync']);
   const colors = useMaterialColors();
-  const { servers, isUnconfigured, isRefreshing, refresh } = useLanMySpaceSheet(visible);
+  const { servers, isUnconfigured } = useLanMySpaceSheet(visible);
   const [editingServerId, setEditingServerId] = useState<string | 'new' | null>(null);
 
   useEffect(() => {
@@ -39,7 +54,14 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
 
   const activeServer = servers.find((server) => server.isActive) ?? null;
   const otherServers = servers.filter((server) => !server.isActive);
-  const contentHeight = Math.min(Math.max(servers.length * 80 + 144, 240), 520);
+  const sectionCount = Number(Boolean(activeServer)) + Number(otherServers.length > 0);
+  const contentHeight = Math.min(
+    Math.max(
+      servers.length * 88 + sectionCount * 24 + Math.max(sectionCount - 1, 0) * 12 + 20,
+      112
+    ),
+    520
+  );
 
   return (
     <MySpaceLayout
@@ -50,8 +72,6 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
       onAction={() => setEditingServerId('new')}
       actionPending={false}
       actionEnabled
-      isRefreshing={isRefreshing}
-      onRefresh={refresh}
       contentHeight={contentHeight}
       supplementary={
         <LanServerEditorSheet
@@ -79,26 +99,49 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
       ) : null}
 
       {activeServer ? (
-        <Column>
+        <Column modifiers={[fillMaxWidth()]}>
           <ComposeText style={SECTION_STYLE} color={colors.onSurfaceVariant}>
             {t('syncChannel.currentConnection', { ns: 'settings' })}
           </ComposeText>
-          <LanServerRow server={activeServer} onPress={() => setEditingServerId(activeServer.id)} />
+          <Spacer modifiers={[height(6)]} />
+          <Surface
+            color={colors.surfaceContainerLow}
+            border={{ color: colors.outlineVariant }}
+            shape={SERVER_LIST_SHAPE}
+            modifiers={[fillMaxWidth()]}
+          >
+            <LanServerRow
+              server={activeServer}
+              onPress={() => setEditingServerId(activeServer.id)}
+            />
+          </Surface>
         </Column>
       ) : null}
 
       {otherServers.length > 0 ? (
-        <Column>
+        <Column modifiers={[fillMaxWidth()]}>
+          {activeServer ? <Spacer modifiers={[height(12)]} /> : null}
           <ComposeText style={SECTION_STYLE} color={colors.onSurfaceVariant}>
             {t('lan.title', { ns: 'settingsSync' })}
           </ComposeText>
-          {otherServers.map((server) => (
-            <LanServerRow
-              key={server.id}
-              server={server}
-              onPress={() => setEditingServerId(server.id)}
-            />
-          ))}
+          <Spacer modifiers={[height(6)]} />
+          <Surface
+            color={colors.surfaceContainerLow}
+            border={{ color: colors.outlineVariant }}
+            shape={SERVER_LIST_SHAPE}
+            modifiers={[fillMaxWidth()]}
+          >
+            <Column>
+              {otherServers.map((server, index) => (
+                <React.Fragment key={server.id}>
+                  <LanServerRow server={server} onPress={() => setEditingServerId(server.id)} />
+                  {index < otherServers.length - 1 ? (
+                    <HorizontalDivider color={colors.outlineVariant} modifiers={[fillMaxWidth()]} />
+                  ) : null}
+                </React.Fragment>
+              ))}
+            </Column>
+          </Surface>
         </Column>
       ) : null}
     </MySpaceLayout>
@@ -115,27 +158,24 @@ function LanServerRow({ server, onPress }: { server: LanMySpaceServerView; onPre
       ? colors.error
       : colors.outline;
   return (
-    <ListItem modifiers={[clickable(onPress)]}>
-      <ListItem.LeadingContent>
-        <Icon source={ICONS.status} size={10} tint={statusColor} />
-      </ListItem.LeadingContent>
-      <ListItem.HeadlineContent>
-        <ComposeText>{server.name}</ComposeText>
-      </ListItem.HeadlineContent>
-      <ListItem.SupportingContent>
-        <Column>
-          <ComposeText color={colors.onSurfaceVariant}>{server.address}</ComposeText>
-          <ComposeText color={statusColor}>{statusLabel(server.status, t)}</ComposeText>
-        </Column>
-      </ListItem.SupportingContent>
-      <ListItem.TrailingContent>
-        <Icon
-          source={server.isActive ? ICONS.check : ICONS.chevron}
-          size={20}
-          tint={server.isActive ? colors.primary : colors.onSurfaceVariant}
-        />
-      </ListItem.TrailingContent>
-    </ListItem>
+    <Row
+      verticalAlignment="center"
+      modifiers={[fillMaxWidth(), clickable(onPress), padding(16, 12, 16, 12)]}
+    >
+      <Icon source={ICONS.status} size={10} tint={statusColor} />
+      <Spacer modifiers={[width(16)]} />
+      <Column modifiers={[weight(1)]}>
+        <ComposeText color={colors.onSurface}>{server.name}</ComposeText>
+        <ComposeText color={colors.onSurfaceVariant}>{server.address}</ComposeText>
+        <ComposeText color={statusColor}>{statusLabel(server.status, t)}</ComposeText>
+      </Column>
+      <Spacer modifiers={[width(12)]} />
+      <Icon
+        source={server.isActive ? ICONS.check : ICONS.chevron}
+        size={20}
+        tint={server.isActive ? colors.primary : colors.onSurfaceVariant}
+      />
+    </Row>
   );
 }
 

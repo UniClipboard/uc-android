@@ -87,7 +87,6 @@ export function P2pMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
     isInitialFailed,
     isKnownEmpty,
     deviceListFailed,
-    isUserRefreshing,
     refresh,
     invitation,
     invitationPending,
@@ -131,8 +130,6 @@ export function P2pMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
       onAction={() => void issueInvitation()}
       actionPending={invitationPending}
       actionEnabled={canIssueInvitation}
-      isRefreshing={isUserRefreshing}
-      onRefresh={refresh}
       contentHeight={listHeight}
       supplementary={deviceDetail}
     >
