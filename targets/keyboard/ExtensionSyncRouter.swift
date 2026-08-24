@@ -1,10 +1,112 @@
 import Foundation
 internal import UcEngineCore
 
+enum KeyboardRemoteChange: Sendable {
+    case pasteboardUpdated
+    case snapshot(DeviceClipboardSnapshot)
+}
+
+struct KeyboardSyncResult: Sendable {
+    let remoteChange: KeyboardRemoteChange?
+    let delivery: ExtensionDeliveryReport?
+    let peerRefresh: ExtensionPeerRefreshReport
+
+    init(
+        remoteChange: KeyboardRemoteChange? = nil,
+        delivery: ExtensionDeliveryReport? = nil,
+        peerRefresh: ExtensionPeerRefreshReport = .init(
+            total: 0,
+            online: 0,
+            offline: 0,
+            errors: 0
+        )
+    ) {
+        self.remoteChange = remoteChange
+        self.delivery = delivery
+        self.peerRefresh = peerRefresh
+    }
+}
+
+@MainActor
+protocol KeyboardSyncTransport: AnyObject {
+    var channel: SyncChannel { get }
+    func synchronize(_ snapshot: DeviceClipboardSnapshot?) async throws -> KeyboardSyncResult
+    func waitForRemoteChange(timeoutMs: UInt64) async throws -> KeyboardRemoteChange?
+    func stop()
+}
+
+@MainActor
+final class KeyboardP2pSyncTransport: KeyboardSyncTransport {
+    let channel = SyncChannel.p2p
+    private var client: ExtensionP2pClient?
+    private var controller: ExtensionP2pClientController?
+
+    func synchronize(_ snapshot: DeviceClipboardSnapshot?) async throws -> KeyboardSyncResult {
+        let client = try await session()
+        let result = try await ExtensionSyncExecutor.run {
+            try ExtensionSyncRouter.synchronizeP2pSnapshot(snapshot, using: client)
+        }
+        return KeyboardSyncResult(
+            remoteChange: result.receivedRemoteChange ? .pasteboardUpdated : nil,
+            delivery: result.delivery,
+            peerRefresh: result.peerRefresh
+        )
+    }
+
+    func waitForRemoteChange(timeoutMs: UInt64) async throws -> KeyboardRemoteChange? {
+        let client = try await session()
+        let received = try await ExtensionSyncExecutor.run {
+            try client.waitForRemoteChange(timeoutMs: timeoutMs)
+        }
+        return received ? .pasteboardUpdated : nil
+    }
+
+    func stop() {
+        let activeClient = client
+        let activeController = controller
+        client = nil
+        controller = nil
+        if let activeClient {
+            activeClient.shutdown()
+        } else {
+            activeController?.stopForSuspension()
+        }
+    }
+
+    private func session() async throws -> ExtensionP2pClient {
+        if let client { return client }
+        let nextController = try ExtensionP2pClientController()
+        controller = nextController
+        do {
+            let nextClient = try await ExtensionSyncExecutor.run {
+                try ExtensionP2pClient(controller: nextController)
+            }
+            guard controller === nextController, !Task.isCancelled else {
+                nextClient.shutdown()
+                throw CancellationError()
+            }
+            client = nextClient
+            return nextClient
+        } catch {
+            if controller === nextController { controller = nil }
+            nextController.stopForSuspension()
+            throw error
+        }
+    }
+}
+
 enum ExtensionSyncRouter {
     private static let outboundDeliveryTimeoutMs: UInt64 = 5 * 60 * 1_000
 
-    static func synchronizeKeyboardSnapshot(
+    @MainActor
+    static func makeTransport(settings: AppSettings, store: SettingsStore) -> any KeyboardSyncTransport {
+        switch settings.syncChannel {
+        case .lan: return KeyboardLanSyncTransport(store: store)
+        case .p2p: return KeyboardP2pSyncTransport()
+        }
+    }
+
+    static func synchronizeP2pSnapshot(
         _ snapshot: DeviceClipboardSnapshot?,
         using client: ExtensionP2pClient
     ) throws -> ExtensionSyncResult {

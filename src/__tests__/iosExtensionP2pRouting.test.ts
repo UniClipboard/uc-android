@@ -36,15 +36,19 @@ describe('iOS extension P2P routing', () => {
     expect(corePodspec).toContain('s.vendored_frameworks');
   });
 
-  it('routes the keyboard extension through P2P only, and keeps the Share target P2P-free', () => {
+  it('routes the keyboard extension through the selected sync transport, and keeps the Share target P2P-free', () => {
     const router = readProjectFile('targets/keyboard/ExtensionSyncRouter.swift');
     const keyboard = readProjectFile('targets/keyboard/KeyboardModel.swift');
     const shareController = readProjectFile('targets/share/ShareViewController.swift');
 
-    expect(router).not.toContain('ExtensionSyncChannel');
-    expect(router).not.toContain('settings.syncChannel');
-    expect(router).not.toMatch(/\bLAN\b|\blan\b/);
-    expect(keyboard).toContain('ExtensionSyncRouter');
+    expect(router).toContain('protocol KeyboardSyncTransport');
+    expect(router).toContain('KeyboardP2pSyncTransport');
+    expect(router).toContain('KeyboardLanSyncTransport');
+    expect(router).toContain('settings.syncChannel');
+    expect(router).not.toMatch(/catch[\s\S]{0,200}KeyboardP2pSyncTransport/);
+    expect(keyboard).toContain('private var syncTransport: (any KeyboardSyncTransport)?');
+    expect(keyboard).toContain('ensureSyncTransport(settings: settings)');
+    expect(keyboard).not.toContain('private var p2pClient: ExtensionP2pClient?');
     expect(shareController).not.toMatch(/ExtensionSyncRouter|ExtensionP2pClient|UcEngineCore/);
   });
 
@@ -74,15 +78,15 @@ describe('iOS extension P2P routing', () => {
     expect(host).toContain('P2pRuntimeOwnership');
     expect(host).toContain('receiveTimeoutMs: UInt64 = 3_000');
     expect(module).toContain('RuntimeOwnedNativeLifecycle');
-    expect(router).toContain('synchronizeKeyboardSnapshot');
-    expect(keyboard).toContain('receivedRemoteChange');
-    expect(keyboard).toContain('try await ExtensionSyncExecutor.run');
+    expect(router).toContain('synchronizeP2pSnapshot');
+    expect(router).toContain('result.receivedRemoteChange');
+    expect(router).toContain('try await ExtensionSyncExecutor.run');
     expect(keyboard).not.toContain(
-      'let result = try ExtensionSyncRouter.synchronizeKeyboardSnapshot(snapshot)'
+      'let result = try ExtensionSyncRouter.synchronizeP2pSnapshot(snapshot)'
     );
     expect(keyboard).toContain('case .offline');
     expect(keyboard).toContain('case .pending');
-    expect(keyboard).toContain('publishP2pRemoteChange(clearError: !deliveryFailed)');
+    expect(keyboard).toContain('publishRemoteChange(remoteChange, clearError: !deliveryFailed)');
     expect(keyboard).not.toMatch(/guard let snapshot else \{[\s\S]*?pushStatus = \.none/);
   });
 
@@ -108,14 +112,16 @@ describe('iOS extension P2P routing', () => {
 
   it('keeps automatic local clipboard synchronization visually quiet', () => {
     const keyboard = readProjectFile('targets/keyboard/KeyboardModel.swift');
-    const p2pSync = keyboard.match(/private func syncP2pSnapshot\([\s\S]*?\n    \}/)?.[0];
+    const selectedSync = keyboard.match(
+      /private func syncSelectedTransport\([\s\S]*?\n    \}/
+    )?.[0];
 
     expect(keyboard).toContain('publishHistoryChanges: trigger.shouldPublishHistoryImmediately');
-    expect(p2pSync).toBeDefined();
-    expect(p2pSync).toContain('publishHistoryChanges: Bool');
-    expect(p2pSync).toContain('showSyncFeedback: Bool');
+    expect(selectedSync).toBeDefined();
+    expect(selectedSync).toContain('publishHistoryChanges: Bool');
+    expect(selectedSync).toContain('showSyncFeedback: Bool');
     expect(keyboard).toContain('if publishHistoryChanges { reloadCards() }');
-    expect(p2pSync).toMatch(/else if publishHistoryChanges\s*\{\s*reloadCards\(\)/);
+    expect(selectedSync).toMatch(/else if publishHistoryChanges\s*\{[\s\S]*?reloadCards\(\)/);
   });
 
   it('prepares the restored keyboard before UIKit renders its first frame', () => {
@@ -197,19 +203,21 @@ describe('iOS extension P2P routing', () => {
   it('records synchronized clipboard writes and skips unchanged card publication', () => {
     const keyboard = readProjectFile('targets/keyboard/KeyboardModel.swift');
     const history = readProjectFile('targets/_shared/HistoryDatabase.swift');
-    const p2pSync = keyboard.match(/private func syncP2pSnapshot\([\s\S]*?\n    \}/)?.[0];
+    const selectedSync = keyboard.match(
+      /private func syncSelectedTransport\([\s\S]*?\n    \}/
+    )?.[0];
     const reloadCards = keyboard.match(/private func reloadCards\(\) \{[\s\S]*?\n    \}/)?.[0];
     const cardEquality = keyboard.match(
       /static func == \(lhs: Card, rhs: Card\) -> Bool \{[\s\S]*?\n        \}/
     )?.[0];
 
-    expect(p2pSync).toBeDefined();
-    expect(p2pSync).toContain('UIPasteboard.general.changeCount');
-    expect(p2pSync).toContain('recordHandledClipboardRevision');
-    expect(p2pSync).toContain('clipboardRevisionTracker.markProcessing(changeCount)');
-    expect(p2pSync).toContain('clipboardRevisionTracker.finishProcessing(changeCount)');
-    expect(p2pSync?.indexOf('markProcessing(changeCount)')).toBeLessThan(
-      p2pSync?.indexOf('p2pSession()') ?? -1
+    expect(selectedSync).toBeDefined();
+    expect(keyboard).toContain('UIPasteboard.general.changeCount');
+    expect(selectedSync).toContain('recordHandledClipboardRevision');
+    expect(selectedSync).toContain('clipboardRevisionTracker.markProcessing(changeCount)');
+    expect(selectedSync).toContain('clipboardRevisionTracker.finishProcessing(changeCount)');
+    expect(selectedSync?.indexOf('markProcessing(changeCount)')).toBeLessThan(
+      selectedSync?.indexOf('ensureSyncTransport(settings: settings)') ?? -1
     );
     expect(reloadCards).toBeDefined();
     expect(reloadCards).toContain('let nextCards =');
@@ -229,24 +237,24 @@ describe('iOS extension P2P routing', () => {
     expect(host).not.toContain('defer { close() }');
     expect(host).toContain('public func waitForRemoteChange(timeoutMs:');
     expect(host).toContain('public func shutdown()');
-    expect(router).toContain('using client: ExtensionP2pClient');
-    expect(keyboard).toContain('private var p2pClient: ExtensionP2pClient?');
-    expect(keyboard).toContain('private var p2pReceiveTask: Task<Void, Never>?');
-    expect(keyboard).toContain('startP2pReceiving');
-    expect(keyboard).toContain('stopP2pSession');
+    expect(router).toContain('final class KeyboardP2pSyncTransport');
+    expect(router).toContain('private var client: ExtensionP2pClient?');
+    expect(keyboard).toContain('private var transportReceiveTask: Task<Void, Never>?');
+    expect(keyboard).toContain('startTransportReceiving');
+    expect(keyboard).toContain('stopSyncTransport');
     expect(keyboard).toContain('syncEventGate.cancelAll()');
-    expect(keyboard).toMatch(/func stopMonitoring\(\)[\s\S]*?stopP2pSession\(\)/);
+    expect(keyboard).toMatch(/func stopMonitoring\(\)[\s\S]*?stopSyncTransport\(\)/);
   });
 
   it('stops an established or starting P2P session before keyboard suspension', () => {
-    const keyboard = readProjectFile('targets/keyboard/KeyboardModel.swift');
-    const stopSession = keyboard.match(/private func stopP2pSession\(\) \{[\s\S]*?\n    \}/)?.[0];
+    const router = readProjectFile('targets/keyboard/ExtensionSyncRouter.swift');
+    const stopSession = router.match(/func stop\(\) \{[\s\S]*?\n    \}/)?.[0];
 
-    expect(keyboard).toContain('private var p2pSessionController: ExtensionP2pClientController?');
-    expect(keyboard).toContain('ExtensionP2pClient(controller: controller)');
+    expect(router).toContain('private var controller: ExtensionP2pClientController?');
+    expect(router).toContain('ExtensionP2pClient(controller: nextController)');
     expect(stopSession).toBeDefined();
-    expect(stopSession).toContain('client.shutdown()');
-    expect(stopSession).toContain('controller?.stopForSuspension()');
+    expect(stopSession).toContain('activeClient.shutdown()');
+    expect(stopSession).toContain('activeController?.stopForSuspension()');
     expect(stopSession).not.toContain('Task.detached');
   });
 
@@ -310,14 +318,12 @@ describe('iOS extension P2P routing', () => {
       'sync.request',
       'sync.start',
       'sync.finish',
-      'p2p.connect.start',
-      'p2p.connect.success',
-      'p2p.connect.failure',
-      'p2p.send.result',
-      'p2p.receive.wait',
-      'p2p.receive.change',
-      'p2p.receive.failure',
-      'p2p.close.start',
+      'transport.select',
+      'transport.sync.result',
+      'transport.receive.wait',
+      'transport.receive.change',
+      'transport.receive.failure',
+      'transport.stop',
       'history.reload',
     ]) {
       expect(keyboard).toContain(`"${event}"`);

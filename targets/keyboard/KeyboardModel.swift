@@ -20,7 +20,7 @@ private let log = Logger(subsystem: "app.uniclipboard.keyboard", category: "sync
 ///
 /// MainActor-isolated (the target's default isolation). Pasteboard reads run
 /// on main; network work hops off via `await` on the non-isolated
-/// P2P work runs outside the main actor through the extension engine.
+/// Network work runs outside the main actor through the selected transport.
 ///
 /// Uses `ObservableObject` + `@Published` rather than the iOS 17 `@Observable`
 /// macro so the extension's deployment target can stay at iOS 16 — the
@@ -164,10 +164,9 @@ final class KeyboardModel: ObservableObject {
     private var syncGeneration = 0
     private var syncTask: Task<Void, Never>?
     private var syncEventGate = ExtensionSyncEventGate()
-    private var p2pClient: ExtensionP2pClient?
-    private var p2pSessionController: ExtensionP2pClientController?
-    private var p2pReceiveTask: Task<Void, Never>?
-    private var p2pReceiveIdlePolls = 0
+    private var syncTransport: (any KeyboardSyncTransport)?
+    private var transportReceiveTask: Task<Void, Never>?
+    private var transportReceiveIdlePolls = 0
     private var clipboardRevisionTracker = ExtensionClipboardRevisionTracker()
     private var isVisible = false
     private var flashTask: Task<Void, Never>?
@@ -357,7 +356,7 @@ final class KeyboardModel: ObservableObject {
     func stopMonitoring() {
         KeyboardDiagnostics.shared.record("model.stop", fields: [
             "generation": String(syncGeneration),
-            "hadClient": String(p2pClient != nil),
+            "hadTransport": String(syncTransport != nil),
             "hadSyncTask": String(syncTask != nil),
         ])
         isVisible = false
@@ -368,7 +367,7 @@ final class KeyboardModel: ObservableObject {
         syncTask = nil
         syncEventGate.cancelAll()
         setSyncing(false)
-        stopP2pSession()
+        stopSyncTransport()
     }
 
     /// One poll iteration compares only the pasteboard revision. It never runs
@@ -425,7 +424,7 @@ final class KeyboardModel: ObservableObject {
 
         // Read the pasteboard once — the content read triggers iOS's
         // "允许粘贴" prompt, so we gate on changeCount and share the
-        // snapshot between the local-history and P2P paths.
+        // snapshot between local history and the selected transport.
         let cc = UIPasteboard.general.changeCount
         let storedCC = store.loadLastSyncedChangeCount()
         let ccChanged = cc != storedCC
@@ -448,7 +447,7 @@ final class KeyboardModel: ObservableObject {
         }
         if publishHistoryChanges { reloadCards() }
         publishGate(.ok)
-        await syncP2pSnapshot(
+        await syncSelectedTransport(
             snap,
             changeCount: cc,
             force: force,
@@ -457,8 +456,8 @@ final class KeyboardModel: ObservableObject {
         )
     }
 
-    /// Runs one bounded send-and-receive session against the App Group-backed store.
-    private func syncP2pSnapshot(
+    /// Runs one bounded send-and-receive session through the selected transport.
+    private func syncSelectedTransport(
         _ snapshot: DeviceClipboardSnapshot?,
         changeCount: Int,
         force: Bool,
@@ -468,14 +467,14 @@ final class KeyboardModel: ObservableObject {
         clipboardRevisionTracker.markProcessing(changeCount)
         defer { clipboardRevisionTracker.finishProcessing(changeCount) }
         do {
-            let client = try await p2pSession()
-            let result = try await ExtensionSyncExecutor.run {
-                try ExtensionSyncRouter.synchronizeKeyboardSnapshot(snapshot, using: client)
-            }
+            let settings = store.loadAppSettings()
+            let transport = ensureSyncTransport(settings: settings)
+            let result = try await transport.synchronize(snapshot)
             guard isVisible, !Task.isCancelled else { return }
             var deliveryFields = [
                 "hasSnapshot": String(snapshot != nil),
-                "receivedRemote": String(result.receivedRemoteChange),
+                "receivedRemote": String(result.remoteChange != nil),
+                "transport": transport.channel.rawValue,
                 "state": result.delivery?.state.diagnosticName ?? "none",
                 "refreshTotal": String(result.peerRefresh.total),
                 "refreshOnline": String(result.peerRefresh.online),
@@ -489,11 +488,7 @@ final class KeyboardModel: ObservableObject {
                 deliveryFields["errored"] = String(delivery.errored)
                 deliveryFields["pending"] = String(delivery.pending)
             }
-            KeyboardDiagnostics.shared.record("p2p.send.result", fields: deliveryFields)
-            let currentChangeCount = result.receivedRemoteChange
-                ? UIPasteboard.general.changeCount
-                : changeCount
-            recordHandledClipboardRevision(currentChangeCount)
+            KeyboardDiagnostics.shared.record("transport.sync.result", fields: deliveryFields)
 
             if let snapshot, let delivery = result.delivery {
                 switch delivery.state {
@@ -523,23 +518,27 @@ final class KeyboardModel: ObservableObject {
             }
 
             let deliveryFailed = result.delivery.map { $0.state != .delivered } ?? false
-            if result.receivedRemoteChange {
-                publishP2pRemoteChange(clearError: !deliveryFailed)
+            if let remoteChange = result.remoteChange {
+                publishRemoteChange(remoteChange, clearError: !deliveryFailed)
             } else if publishHistoryChanges {
+                recordHandledClipboardRevision(changeCount)
                 reloadCards()
+            } else {
+                recordHandledClipboardRevision(changeCount)
             }
 
             let deliverySucceeded = result.delivery?.state == .delivered
             if showSyncFeedback {
                 if deliveryFailed {
                     flashSync(.failure)
-                } else if force || deliverySucceeded || result.receivedRemoteChange {
+                } else if force || deliverySucceeded || result.remoteChange != nil {
                     flashSync(.success)
                 }
             }
+            startTransportReceiving(transport)
         } catch {
             guard isVisible, !Task.isCancelled else { return }
-            KeyboardDiagnostics.shared.record("p2p.send.result", fields: [
+            KeyboardDiagnostics.shared.record("transport.sync.result", fields: [
                 "outcome": "failure",
                 "errorType": String(reflecting: type(of: error)),
             ])
@@ -550,114 +549,107 @@ final class KeyboardModel: ObservableObject {
         }
     }
 
-    private func p2pSession() async throws -> ExtensionP2pClient {
-        if let p2pClient {
-            KeyboardDiagnostics.shared.record("p2p.connect.reuse")
-            return p2pClient
+    private func ensureSyncTransport(settings: AppSettings) -> any KeyboardSyncTransport {
+        if let syncTransport, syncTransport.channel == settings.syncChannel {
+            return syncTransport
         }
-        let started = DispatchTime.now().uptimeNanoseconds
-        KeyboardDiagnostics.shared.record("p2p.connect.start")
-        let controller = try ExtensionP2pClientController()
-        p2pSessionController = controller
-        do {
-            let client = try await ExtensionSyncExecutor.run {
-                try ExtensionP2pClient(controller: controller)
-            }
-            guard isVisible,
-                  !Task.isCancelled,
-                  p2pSessionController === controller else {
-                client.shutdown()
-                throw CancellationError()
-            }
-            p2pClient = client
-            KeyboardDiagnostics.shared.record("p2p.connect.success", fields: [
-                "durationMs": String(KeyboardDiagnostics.elapsedMilliseconds(since: started)),
-            ])
-            startP2pReceiving(client)
-            return client
-        } catch {
-            if p2pSessionController === controller {
-                p2pSessionController = nil
-            }
-            controller.stopForSuspension()
-            KeyboardDiagnostics.shared.record("p2p.connect.failure", fields: [
-                "durationMs": String(KeyboardDiagnostics.elapsedMilliseconds(since: started)),
-                "errorType": String(reflecting: type(of: error)),
-            ])
-            throw error
-        }
+        stopSyncTransport()
+        let next = ExtensionSyncRouter.makeTransport(settings: settings, store: store)
+        syncTransport = next
+        KeyboardDiagnostics.shared.record("transport.select", fields: [
+            "channel": next.channel.rawValue,
+        ])
+        return next
     }
 
-    private func startP2pReceiving(_ client: ExtensionP2pClient) {
-        p2pReceiveTask?.cancel()
-        p2pReceiveIdlePolls = 0
-        KeyboardDiagnostics.shared.record("p2p.receive.wait", fields: ["phase": "started"])
-        p2pReceiveTask = Task { [weak self, client] in
+    private func startTransportReceiving(_ transport: any KeyboardSyncTransport) {
+        guard transportReceiveTask == nil else { return }
+        transportReceiveIdlePolls = 0
+        KeyboardDiagnostics.shared.record("transport.receive.wait", fields: [
+            "phase": "started",
+            "channel": transport.channel.rawValue,
+        ])
+        transportReceiveTask = Task { [weak self, transport] in
             while !Task.isCancelled {
                 do {
-                    let received = try await ExtensionSyncExecutor.run {
-                        try client.waitForRemoteChange(timeoutMs: 500)
-                    }
+                    let remoteChange = try await transport.waitForRemoteChange(timeoutMs: 500)
                     guard !Task.isCancelled, let self, self.isVisible else { return }
-                    if received {
-                        KeyboardDiagnostics.shared.record("p2p.receive.change")
-                        self.p2pReceiveIdlePolls = 0
-                        self.publishP2pRemoteChange(clearError: true)
+                    guard !self.selectionChanged(from: transport) else {
+                        self.transportReceiveTask = nil
+                        self.requestSync(.appeared)
+                        return
+                    }
+                    if let remoteChange {
+                        KeyboardDiagnostics.shared.record("transport.receive.change", fields: [
+                            "channel": transport.channel.rawValue,
+                        ])
+                        self.transportReceiveIdlePolls = 0
+                        self.publishRemoteChange(remoteChange, clearError: true)
                     } else {
-                        self.p2pReceiveIdlePolls += 1
-                        if self.p2pReceiveIdlePolls >= 20 {
-                            KeyboardDiagnostics.shared.record("p2p.receive.wait", fields: [
+                        self.transportReceiveIdlePolls += 1
+                        if self.transportReceiveIdlePolls >= 20 {
+                            KeyboardDiagnostics.shared.record("transport.receive.wait", fields: [
                                 "phase": "idle_summary",
-                                "polls": String(self.p2pReceiveIdlePolls),
+                                "channel": transport.channel.rawValue,
+                                "polls": String(self.transportReceiveIdlePolls),
                             ])
-                            self.p2pReceiveIdlePolls = 0
+                            self.transportReceiveIdlePolls = 0
                         }
                     }
                     await Task.yield()
                 } catch {
                     guard !Task.isCancelled, let self, self.isVisible else { return }
-                    KeyboardDiagnostics.shared.record("p2p.receive.failure", fields: [
+                    if self.selectionChanged(from: transport) {
+                        self.transportReceiveTask = nil
+                        self.requestSync(.appeared)
+                        return
+                    }
+                    KeyboardDiagnostics.shared.record("transport.receive.failure", fields: [
+                        "channel": transport.channel.rawValue,
                         "errorType": String(reflecting: type(of: error)),
                     ])
                     self.publishLastError(self.message(for: error))
-                    return
+                    try? await Task.sleep(for: .seconds(1))
                 }
             }
         }
     }
 
-    private func stopP2pSession() {
-        p2pReceiveTask?.cancel()
-        p2pReceiveTask = nil
-        p2pReceiveIdlePolls = 0
-        let client = p2pClient
-        let controller = p2pSessionController
-        p2pClient = nil
-        p2pSessionController = nil
-        guard client != nil || controller != nil else {
-            KeyboardDiagnostics.shared.record("p2p.close.start", fields: ["outcome": "no_client"])
-            return
-        }
-        KeyboardDiagnostics.shared.record("p2p.close.start", fields: ["outcome": "suspending"])
-        if let client {
-            client.shutdown()
-        } else {
-            controller?.stopForSuspension()
-        }
-        KeyboardDiagnostics.shared.record("p2p.close.finish")
+    private func selectionChanged(from transport: any KeyboardSyncTransport) -> Bool {
+        store.loadAppSettings().syncChannel != transport.channel
     }
 
-    private func publishP2pRemoteChange(clearError: Bool) {
+    private func stopSyncTransport() {
+        transportReceiveTask?.cancel()
+        transportReceiveTask = nil
+        transportReceiveIdlePolls = 0
+        let transport = syncTransport
+        syncTransport = nil
+        transport?.stop()
+        KeyboardDiagnostics.shared.record("transport.stop", fields: [
+            "channel": transport?.channel.rawValue ?? "none",
+        ])
+    }
+
+    private func publishRemoteChange(_ change: KeyboardRemoteChange, clearError: Bool) {
+        let remote: DeviceClipboardSnapshot?
+        switch change {
+        case .pasteboardUpdated:
+            remote = PasteboardReader.snapshot()
+        case .snapshot(let snapshot):
+            applyRemoteSnapshot(snapshot)
+            remote = snapshot
+        }
         let revision = UIPasteboard.general.changeCount
         recordHandledClipboardRevision(revision)
-        guard let remote = PasteboardReader.snapshot() else {
-            KeyboardDiagnostics.shared.record("p2p.receive.change", fields: [
+        guard let remote else {
+            KeyboardDiagnostics.shared.record("transport.receive.change", fields: [
                 "outcome": "snapshot_missing",
                 "revision": String(revision),
             ])
             return
         }
-        KeyboardDiagnostics.shared.record("p2p.receive.change", fields: [
+        KeyboardDiagnostics.shared.record("transport.receive.change", fields: [
             "outcome": "published",
             "revision": String(revision),
             "kind": remote.clipboard.type.rawValue,
@@ -670,6 +662,22 @@ final class KeyboardModel: ObservableObject {
         history.append(entry: remote.clipboard, direction: .pulled)
         if clearError { publishLastError(nil) }
         reloadCards()
+    }
+
+    private func applyRemoteSnapshot(_ snapshot: DeviceClipboardSnapshot) {
+        let clipboard = snapshot.clipboard
+        switch clipboard.type {
+        case .text:
+            let text = snapshot.payload.flatMap { String(data: $0, encoding: .utf8) }
+                ?? clipboard.text
+            UIPasteboard.general.string = text
+        case .image:
+            guard let payload = snapshot.payload else { return }
+            let ext = (clipboard.dataName as NSString?)?.pathExtension ?? "png"
+            UIPasteboard.general.setData(payload, forPasteboardType: PasteboardReader.uti(forExt: ext))
+        case .file, .group:
+            break
+        }
     }
 
     /// Record the device pasteboard to the shared history log if it carries
@@ -827,7 +835,7 @@ final class KeyboardModel: ObservableObject {
 
     /// Write image bytes to `UIPasteboard.general`, cache them under their
     /// content hash (so the app's offline preview finds them), surface the
-    /// card at the history head, and send it through P2P. Reading back our own
+    /// card at the history head, and send it through the selected transport. Reading back our own
     /// just-written pasteboard never prompts.
     private func copyImageToPasteboard(_ data: Data, ext: String, card: Card) {
         UIPasteboard.general.setData(data, forPasteboardType: PasteboardReader.uti(forExt: ext))
