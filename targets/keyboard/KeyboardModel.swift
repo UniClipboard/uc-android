@@ -822,27 +822,32 @@ final class KeyboardModel: ObservableObject {
                 flashActed(card.id)
             }
         case .image:
-            guard let name = entry.dataName else { return }
+            guard let name = entry.dataName, let hash = entry.hash else { return }
             let rawExt = (name as NSString).pathExtension
             let ext = rawExt.isEmpty ? "png" : rawExt.lowercased()
-            if let hash = entry.hash, let local = store.loadImageData(hash: hash), !local.isEmpty {
-                copyImageToPasteboard(local, ext: ext, card: card)
-            } else {
-                publishPayloadUnavailable()
+            actingCardID = card.id
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                defer {
+                    if actingCardID == card.id { actingCardID = nil }
+                }
+                if let local = await loadImagePayload(hash: hash) {
+                    copyImageToPasteboard(local, ext: ext, card: card)
+                } else {
+                    publishPayloadUnavailable()
+                }
             }
         }
     }
 
-    /// Write image bytes to `UIPasteboard.general`, cache them under their
-    /// content hash (so the app's offline preview finds them), surface the
-    /// card at the history head, and send it through the selected transport. Reading back our own
-    /// just-written pasteboard never prompts.
+    /// Write image bytes to `UIPasteboard.general` for the host app to paste.
+    /// Mark the revision as handled so this user action does not reorder history
+    /// or send an already-known image back through the selected transport.
     private func copyImageToPasteboard(_ data: Data, ext: String, card: Card) {
         UIPasteboard.general.setData(data, forPasteboardType: PasteboardReader.uti(forExt: ext))
+        recordHandledClipboardRevision(UIPasteboard.general.changeCount)
         store.saveImageData(hash: Clipboard.computeBytesHash(data), data: data)
-        history.touch(hash: card.entry.hash, legacyID: card.id)
         flashActed(card.id)
-        requestSync(.localClipboardChanged)
     }
 
     private func publishPayloadUnavailable() {
@@ -860,6 +865,14 @@ final class KeyboardModel: ObservableObject {
 
     // MARK: - Thumbnails
 
+    private func loadImagePayload(hash: String) async -> Data? {
+        if let current = await PayloadCache.shared.read(profileId: "Image-\(hash)"), !current.isEmpty {
+            return current
+        }
+        guard let legacy = store.loadImageData(hash: hash), !legacy.isEmpty else { return nil }
+        return legacy
+    }
+
     /// Lazily fetch + downsample an image card's thumbnail. Cached by content
     /// hash; bounded by a per-image size guard so a huge original never blows
     /// the keyboard's memory budget (those fall back to a placeholder). The
@@ -872,13 +885,7 @@ final class KeyboardModel: ObservableObject {
         if let cached = thumbnailCache.object(forKey: key) { return cached }
         if let size = card.entry.size, size > 8 * 1024 * 1024 { return nil }
 
-        let data: Data?
-        if let current = await PayloadCache.shared.read(profileId: "Image-\(hash)"), !current.isEmpty {
-            data = current
-        } else {
-            data = store.loadImageData(hash: hash)
-        }
-        guard let data else { return nil }
+        guard let data = await loadImagePayload(hash: hash) else { return nil }
         guard let img = Self.downsample(data: data, maxPixel: maxPixel) else { return nil }
         thumbnailCache.setObject(img, forKey: key)
         return img

@@ -1,16 +1,27 @@
 import UIKit
 
+private final class KeyboardExpandedHitAreaView: UIView {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        bounds.insetBy(dx: -6, dy: -6).contains(point)
+    }
+}
+
+private final class KeyboardExpandedHitButton: UIButton {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        bounds.insetBy(dx: -6, dy: -6).contains(point)
+    }
+}
+
 @MainActor
 final class KeyboardTopBarView: UIView {
     var onRefresh: (() -> Void)?
     var onFilterPresentationChange: ((KeyboardFilterPresentation) -> Void)?
     var onFeedback: (() -> Void)?
 
-    private let standardBar = UIView()
+    private let standardBar = KeyboardExpandedHitAreaView()
     private let filterBar = UIView()
-    private let searchButton = UIButton(type: .system)
-    private let titleLabel = UILabel()
-    private let refreshButton = UIButton(type: .system)
+    private let searchButton = KeyboardExpandedHitButton(type: .system)
+    private let refreshButton = KeyboardExpandedHitButton(type: .system)
     private let refreshSpinner = UIActivityIndicatorView(style: .medium)
     private let closeFilterButton = UIButton(type: .system)
     private let filterControl = UISegmentedControl(items: [])
@@ -38,7 +49,6 @@ final class KeyboardTopBarView: UIView {
         rebuildFilterSegments(strings.filterTitles)
 
         searchButton.isHidden = !topBar.showsSearch
-        titleLabel.text = topBar.title
         renderSync(sync, showsRefresh: topBar.showsRefresh)
 
         standardBar.isHidden = filterPresentation.isFiltering
@@ -57,32 +67,37 @@ final class KeyboardTopBarView: UIView {
             ])
         }
 
-        configureIconButton(searchButton, symbol: "magnifyingglass")
-        configureIconButton(refreshButton, symbol: "arrow.clockwise")
+        configureIconButton(
+            searchButton,
+            symbol: "magnifyingglass",
+            symbolSize: 14,
+            width: 34,
+            height: 34,
+            circularBackground: true
+        )
+        searchButton.accessibilityIdentifier = "keyboard.searchButton"
+        configureIconButton(
+            refreshButton,
+            symbol: "arrow.clockwise",
+            symbolSize: 14,
+            width: 34,
+            height: 34,
+            circularBackground: true
+        )
+        refreshButton.accessibilityIdentifier = "keyboard.refreshButton"
         configureIconButton(closeFilterButton, symbol: "xmark")
         searchButton.addTarget(self, action: #selector(openFilter), for: .touchUpInside)
         refreshButton.addTarget(self, action: #selector(refresh), for: .touchUpInside)
         closeFilterButton.addTarget(self, action: #selector(closeFilter), for: .touchUpInside)
 
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.font = .preferredFont(forTextStyle: .subheadline).withWeight(.semibold)
-        titleLabel.textColor = .label
-        titleLabel.textAlignment = .center
-        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
         refreshSpinner.translatesAutoresizingMaskIntoConstraints = false
         refreshSpinner.hidesWhenStopped = true
         standardBar.addSubview(searchButton)
-        standardBar.addSubview(titleLabel)
         standardBar.addSubview(refreshButton)
         standardBar.addSubview(refreshSpinner)
         NSLayoutConstraint.activate([
             searchButton.leadingAnchor.constraint(equalTo: standardBar.leadingAnchor),
             searchButton.centerYAnchor.constraint(equalTo: standardBar.centerYAnchor),
-            titleLabel.centerXAnchor.constraint(equalTo: standardBar.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: standardBar.centerYAnchor),
-            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: searchButton.trailingAnchor, constant: 8),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: refreshButton.leadingAnchor, constant: -8),
             refreshButton.trailingAnchor.constraint(equalTo: standardBar.trailingAnchor),
             refreshButton.centerYAnchor.constraint(equalTo: standardBar.centerYAnchor),
             refreshSpinner.centerXAnchor.constraint(equalTo: refreshButton.centerXAnchor),
@@ -143,7 +158,8 @@ final class KeyboardTopBarView: UIView {
         symbol: String,
         symbolSize: CGFloat = 16,
         width: CGFloat = 34,
-        height: CGFloat = 34
+        height: CGFloat = 34,
+        circularBackground: Bool = false
     ) {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(UIImage(systemName: symbol), for: .normal)
@@ -152,6 +168,11 @@ final class KeyboardTopBarView: UIView {
             pointSize: symbolSize,
             weight: .medium
         )
+        if circularBackground {
+            button.backgroundColor = KeyboardSurface.itemUIColor
+            button.layer.cornerRadius = height / 2
+            button.layer.cornerCurve = .continuous
+        }
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: width),
             button.heightAnchor.constraint(equalToConstant: height),

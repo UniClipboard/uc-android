@@ -13,7 +13,7 @@ enum KeyboardLayoutMetrics {
     static let topBarHeight: CGFloat = 38
     static let topBarVPad: CGFloat = 4
     static let hMargin: CGFloat = 12
-    static let cardHeight: CGFloat = 150
+    static let cardHeight: CGFloat = 164
     static let cardWidth: CGFloat = 152
     static let cardSpacing: CGFloat = 12
     static let cardRowVPad: CGFloat = 4

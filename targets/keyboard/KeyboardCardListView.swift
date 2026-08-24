@@ -226,6 +226,10 @@ final class KeyboardCardListView: UIView {
     }
 
     private func renderCardActions(content: KeyboardViewState.Content) {
+        let displayedIDs = Set(dataSource.snapshot().itemIdentifiers)
+        for card in content.cards where displayedIDs.contains(card.id) {
+            cardsByID[card.id] = card
+        }
         let current = KeyboardCardActionState(
             actingID: content.cards.first(where: \.isActing)?.id,
             actedID: content.cards.first(where: \.didAct)?.id

@@ -41,7 +41,7 @@ final class KeyboardCardCell: UICollectionViewCell {
     private let imagePlaceholderView = UIImageView()
     private let imageEdgeShadeView = KeyboardImageEdgeShadeView()
     private let actedOverlay = UIView()
-    private let actedLabel = UILabel()
+    private let actedIcon = UIImageView()
     private var thumbnailTask: Task<Void, Never>?
     private var representedID: UUID?
     private var thumbnailRequest: KeyboardThumbnailRequest?
@@ -97,12 +97,17 @@ final class KeyboardCardCell: UICollectionViewCell {
 
         actedOverlay.translatesAutoresizingMaskIntoConstraints = false
         actedOverlay.backgroundColor = KeyboardSurface.itemUIColor.withAlphaComponent(0.94)
+        actedOverlay.accessibilityIdentifier = "keyboard.actedOverlay"
         actedOverlay.isHidden = true
-        actedLabel.translatesAutoresizingMaskIntoConstraints = false
-        actedLabel.font = .preferredFont(forTextStyle: .subheadline).withWeight(.semibold)
-        actedLabel.textColor = .systemGreen
-        actedLabel.textAlignment = .center
-        actedOverlay.addSubview(actedLabel)
+        actedIcon.translatesAutoresizingMaskIntoConstraints = false
+        actedIcon.accessibilityIdentifier = "keyboard.actedIcon"
+        actedIcon.contentMode = .scaleAspectFit
+        actedIcon.tintColor = .systemGreen
+        actedIcon.image = UIImage(
+            systemName: "checkmark.circle.fill",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 30, weight: .semibold)
+        )
+        actedOverlay.addSubview(actedIcon)
 
         [imageView, imagePlaceholderView, imageEdgeShadeView, headerStack, titleLabel, subtitleLabel, actedOverlay]
             .forEach(contentView.addSubview)
@@ -134,8 +139,8 @@ final class KeyboardCardCell: UICollectionViewCell {
             actedOverlay.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             actedOverlay.topAnchor.constraint(equalTo: contentView.topAnchor),
             actedOverlay.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            actedLabel.centerXAnchor.constraint(equalTo: actedOverlay.centerXAnchor),
-            actedLabel.centerYAnchor.constraint(equalTo: actedOverlay.centerYAnchor),
+            actedIcon.centerXAnchor.constraint(equalTo: actedOverlay.centerXAnchor),
+            actedIcon.centerYAnchor.constraint(equalTo: actedOverlay.centerYAnchor),
         ])
     }
 
@@ -153,6 +158,9 @@ final class KeyboardCardCell: UICollectionViewCell {
         imagePlaceholderView.isHidden = true
         imageEdgeShadeView.isHidden = true
         activity.stopAnimating()
+        actedOverlay.layer.removeAllAnimations()
+        actedOverlay.alpha = 0
+        actedOverlay.transform = .identity
         actedOverlay.isHidden = true
     }
 
@@ -168,8 +176,7 @@ final class KeyboardCardCell: UICollectionViewCell {
         titleLabel.text = card.title
         subtitleLabel.text = card.subtitle.map { "⌁ \($0)" }
         activity.setAnimating(card.isActing)
-        actedOverlay.isHidden = !card.didAct
-        actedLabel.text = "✓ " + card.actionConfirmation
+        renderActedFeedback(card.didAct)
 
         let symbol: String
         let tint: UIColor
@@ -213,6 +220,39 @@ final class KeyboardCardCell: UICollectionViewCell {
             self?.imageView.image = image
             self?.imageView.isHidden = image == nil
             self?.imagePlaceholderView.isHidden = image != nil
+        }
+    }
+
+    private func renderActedFeedback(_ visible: Bool) {
+        if visible {
+            guard actedOverlay.isHidden else { return }
+            actedOverlay.layer.removeAllAnimations()
+            actedOverlay.isHidden = false
+            actedOverlay.alpha = 0
+            actedOverlay.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+            UIView.animate(
+                withDuration: 0.18,
+                delay: 0,
+                options: [.curveEaseOut, .beginFromCurrentState]
+            ) {
+                self.actedOverlay.alpha = 1
+                self.actedOverlay.transform = .identity
+            }
+            return
+        }
+
+        guard !actedOverlay.isHidden else { return }
+        UIView.animate(
+            withDuration: 0.28,
+            delay: 0,
+            options: [.curveEaseInOut, .beginFromCurrentState]
+        ) {
+            self.actedOverlay.alpha = 0
+            self.actedOverlay.transform = CGAffineTransform(scaleX: 0.94, y: 0.94)
+        } completion: { finished in
+            guard finished else { return }
+            self.actedOverlay.isHidden = true
+            self.actedOverlay.transform = .identity
         }
     }
 }
