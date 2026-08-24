@@ -35,6 +35,7 @@ export function SyncChannelPage({
   return (
     <IosSheetPage
       title={t('syncChannel.title')}
+      spacing={0}
       leftSlots={[<HeaderCircleButton key="back" systemName="chevron.left" onPress={onBack} />]}
     >
       <IosSheetForm>

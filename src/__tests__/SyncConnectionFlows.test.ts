@@ -97,6 +97,29 @@ describe('unified sync connection flows', () => {
     }
   });
 
+  it('presents the iOS invitation input as an eight-cell OTP field', () => {
+    const ios = source('components/AddSyncConnectionSheet.ios.tsx');
+    const joinCodeStart = ios.indexOf("{mode === 'joinCode' ? (");
+    const joinDetailsStart = ios.indexOf("{mode === 'joinDetails' ? (", joinCodeStart);
+    const joinCodeStep = ios.slice(joinCodeStart, joinDetailsStart);
+
+    expect(ios).toContain('function InvitationCodeField');
+    expect(ios).toContain('Array.from({ length: 8 }');
+    expect(ios).toContain('slice(0, 4)');
+    expect(ios).toContain('slice(4, 8)');
+    expect(ios).toContain('inputRef.current?.focus()');
+    expect(ios).toContain('<InvitationCodeField');
+    expect(ios).toContain('code={invitationCode}');
+    expect(ios).toContain('maxLength={8}');
+    expect(ios).toContain('autoFocus');
+    expect(ios).toContain('ClipboardProxy.getStringAsync()');
+    expect(ios).toContain("t('space.flow.pasteInvitation')");
+    expect(ios).toContain("error && mode !== 'joinCode'");
+    expect(joinCodeStep).not.toContain('padding({ top:');
+    expect(joinCodeStep).not.toContain("font({ size: 19, weight: 'semibold' })");
+    expect(ios).toContain("const canGoBack = mode === 'joinDetails';");
+  });
+
   it('supports copy, share, expiry, and network scope while the creator waits', () => {
     const android = source('components/AddSyncConnectionSheet.android.tsx');
     const ios = source('components/AddSyncConnectionSheet.ios.tsx');
@@ -157,6 +180,45 @@ describe('unified sync connection flows', () => {
     expect(ios).toContain('deviceNameState.value = nextDeviceName');
   });
 
+  it('focuses the space password when the iOS create sheet opens', () => {
+    const ios = source('components/AddSyncConnectionSheet.ios.tsx');
+    const createStart = ios.indexOf("{mode === 'create' ? (");
+    const joinStart = ios.indexOf("{mode === 'joinCode' ? (", createStart);
+    const createStep = ios.slice(createStart, joinStart);
+
+    expect(createStep).toMatch(/<SecureField[\s\S]*autoFocus/);
+  });
+
+  it('explains the space password in plain language in every supported language', () => {
+    for (const locale of ['en', 'pt-BR', 'ru', 'zh']) {
+      const messages = JSON.parse(source(`i18n/locales/${locale}/settingsSync.json`));
+
+      expect(messages.space.flow.createBody.length).toBeGreaterThan(30);
+      expect(messages.space.flow.joinDetailsBody.length).toBeGreaterThan(30);
+    }
+
+    const zh = JSON.parse(source('i18n/locales/zh/settingsSync.json'));
+    const en = JSON.parse(source('i18n/locales/en/settingsSync.json'));
+    const zhPasswordCopy = [
+      zh.space.footer,
+      zh.space.field.passphrase,
+      zh.space.flow.createBody,
+      zh.space.flow.joinDetailsBody,
+      zh.space.error.passphraseRequired,
+      zh.space.error.passphraseMismatch,
+    ];
+    const enPasswordCopy = [
+      en.space.footer,
+      en.space.field.passphrase,
+      en.space.flow.createBody,
+      en.space.flow.joinDetailsBody,
+      en.space.error.passphraseRequired,
+      en.space.error.passphraseMismatch,
+    ];
+    expect(zhPasswordCopy.join('\n')).not.toContain('口令');
+    expect(enPasswordCopy.join('\n')).not.toContain('passphrase');
+  });
+
   it('uses the system device name as the setup default on both platforms', () => {
     const android = source('components/AddSyncConnectionSheet.android.tsx');
     const ios = source('components/AddSyncConnectionSheet.ios.tsx');
@@ -184,6 +246,7 @@ describe('unified sync connection flows', () => {
 
       expect(messages.space.flow.joinCodeSheetTitle).toEqual(expect.any(String));
       expect(messages.space.flow.joinCodeTitle).toEqual(expect.any(String));
+      expect(messages.space.flow.pasteInvitation).toEqual(expect.any(String));
       expect(messages.space.flow.waitingTitle).toEqual(expect.any(String));
       expect(messages.space.flow.waitingForDevice).toEqual(expect.any(String));
       expect(messages.space.flow.successTitle).toEqual(expect.any(String));

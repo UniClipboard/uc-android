@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
-  Button as SwiftUIButton,
   HStack,
   Image,
   ProgressView,
@@ -13,9 +12,7 @@ import {
 import {
   accessibilityHint,
   accessibilityLabel,
-  buttonStyle,
   contentShape,
-  controlSize,
   font,
   foregroundStyle,
   frame,
@@ -27,7 +24,6 @@ import { useTranslation } from 'react-i18next';
 import type { AddSyncConnectionMode } from '@/components/AddSyncConnectionSheet.types';
 import type { SpaceDeviceManagementController } from '@/components/useSpaceDeviceManagement';
 import { IosSheetForm, IosSheetPage } from '@/components/ui';
-import { iosProminentButtonModifiers } from '@/components/ui/iosButtonStyles.ios';
 import {
   getUnifiedSpaceService,
   UnifiedSpaceInputError,
@@ -241,31 +237,28 @@ export function SpacePage({
       ) : null}
 
       {!spaceId && !isInitialLoading ? (
-        <Section footer={<SwiftUIText>{t('space.footer')}</SwiftUIText>}>
-          <VStack spacing={12} alignment="center" modifiers={[frame({ maxWidth: Infinity })]}>
-            <Image systemName="person.2.wave.2.fill" size={48} color={settingsTileColors.indigo} />
-            <SwiftUIText modifiers={[font({ size: 22, weight: 'bold' })]}>
-              {t('space.empty.title')}
-            </SwiftUIText>
-            <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
-              {error ?? t('space.empty.body')}
-            </SwiftUIText>
-            <SwiftUIButton
-              systemImage="plus.circle.fill"
-              label={t('space.create.title')}
-              onPress={() => onOpenSetup('create')}
-              modifiers={[
-                ...iosProminentButtonModifiers(undefined, { fullWidth: true }),
-                controlSize('large'),
-              ]}
+        <Section
+          header={<SwiftUIText>{t('space.empty.title')}</SwiftUIText>}
+          footer={<SwiftUIText>{t('space.footer')}</SwiftUIText>}
+        >
+          <SettingsNavRow
+            icon="plus"
+            iconColor={settingsTileColors.blue}
+            title={t('space.create.title')}
+            subtitle={t('space.create.description')}
+            accessibilityHint={t('space.create.description')}
+            onPress={() => onOpenSetup('create')}
+            showsPressFeedback={false}
+          />
+          <SettingsNavRow
+            icon="link"
+            iconColor={settingsTileColors.green}
+            title={t('space.join.title')}
+            subtitle={t('space.join.description')}
+            accessibilityHint={t('space.join.description')}
+            onPress={() => onOpenSetup('join')}
+            showsPressFeedback={false}
             />
-            <SwiftUIButton
-              systemImage="link.circle.fill"
-              label={t('space.join.title')}
-              onPress={() => onOpenSetup('join')}
-              modifiers={[buttonStyle('bordered'), controlSize('large'), frame({ maxWidth: Infinity })]}
-            />
-          </VStack>
         </Section>
       ) : null}
 

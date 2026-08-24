@@ -48,6 +48,7 @@ describe('sync channel settings UI', () => {
     expect(androidPage).not.toContain("openSection('space')");
     expect(androidOwner).toContain("section === 'syncChannel'");
     expect(iosPage).toContain('<SettingsNavRow');
+    expect(iosPage).toContain('spacing={0}');
     expect(iosPage).toContain("badge={t('syncChannel.experimental')}");
     expect(iosPage).toContain('selected={syncChannel ===');
     expect(iosPage).toContain('updateConfig({ syncChannel: channel })');

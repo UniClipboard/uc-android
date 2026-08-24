@@ -8,6 +8,7 @@ import {
   Spacer,
   Text as SwiftUIText,
   Toggle,
+  VStack,
 } from '@expo/ui/swift-ui';
 import {
   background,
@@ -78,6 +79,7 @@ export interface SettingsNavRowProps {
   icon?: SFSymbol;
   iconColor?: string;
   title: string;
+  subtitle?: string;
   /** Trailing secondary text (count, status, …). */
   value?: string;
   /** Hex color for the trailing text; defaults to secondary label. */
@@ -97,6 +99,7 @@ export function SettingsNavRow({
   icon,
   iconColor,
   title,
+  subtitle,
   value,
   valueColor,
   badge,
@@ -140,7 +143,20 @@ export function SettingsNavRow({
         {icon && iconColor ? (
           <SettingsIconTile systemName={icon} color={iconColor} />
         ) : null}
-        <SwiftUIText modifiers={[foregroundStyle(destructive ? settingsTileColors.red : 'primary')]}>{title}</SwiftUIText>
+        <VStack alignment="leading" spacing={2}>
+          <SwiftUIText
+            modifiers={[foregroundStyle(destructive ? settingsTileColors.red : 'primary')]}
+          >
+            {title}
+          </SwiftUIText>
+          {subtitle ? (
+            <SwiftUIText
+              modifiers={[font({ size: 13 }), foregroundStyle('secondary')]}
+            >
+              {subtitle}
+            </SwiftUIText>
+          ) : null}
+        </VStack>
         {badge ? (
           <SwiftUIText
             modifiers={[

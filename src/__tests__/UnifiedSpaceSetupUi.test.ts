@@ -47,7 +47,8 @@ describe('unified space setup UI', () => {
     const invitationSheet = source('components/SpaceInvitationSheet.ios.tsx');
     const connectionSheet = source('components/AddSyncConnectionSheet.ios.tsx');
 
-    expect(spacePage).toContain('iosProminentButtonModifiers(undefined,');
+    expect(spacePage).toContain('iconColor={settingsTileColors.blue}');
+    expect(spacePage).toContain('iconColor={settingsTileColors.green}');
     expect(spacePage).not.toContain('iosSaturatedButtonPalette(settingsTileColors.indigo)');
     expect(spacePage).toContain(': settingsTileColors.blue;');
 
@@ -158,6 +159,25 @@ describe('unified space setup UI', () => {
     expect(leaveSection).toContain("title={t('space.leave.action')}");
     expect(leaveSection).toContain('destructive');
     expect(leaveSection).toContain('showsChevron={false}');
+  });
+
+  it('uses full-width settings rows for the two empty-space choices on iOS', () => {
+    const ios = source('screens/settings/ios/SpacePage.tsx');
+    const emptyStateStart = ios.indexOf('!spaceId && !isInitialLoading');
+    const activeSpaceStart = ios.indexOf('{spaceId && error', emptyStateStart);
+    const emptyState = ios.slice(emptyStateStart, activeSpaceStart);
+
+    expect(emptyState).toContain("title={t('space.create.title')}");
+    expect(emptyState).toContain("subtitle={t('space.create.description')}");
+    expect(emptyState).toContain("accessibilityHint={t('space.create.description')}");
+    expect(emptyState).toContain("onPress={() => onOpenSetup('create')}");
+    expect(emptyState).toContain("title={t('space.join.title')}");
+    expect(emptyState).toContain("subtitle={t('space.join.description')}");
+    expect(emptyState).toContain("accessibilityHint={t('space.join.description')}");
+    expect(emptyState).toContain("onPress={() => onOpenSetup('join')}");
+    expect(emptyState.match(/<SettingsNavRow/g)).toHaveLength(2);
+    expect(emptyState).not.toContain('<SwiftUIButton');
+    expect(emptyState).not.toContain('error ??');
   });
 
   it('uses the current device relationship instead of the legacy convergence summary', () => {

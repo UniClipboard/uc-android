@@ -23,7 +23,7 @@
   },
   "space": {
     "title": "我的空间",
-    "footer": "设备名、口令和邀请码仅用于本次操作，不会保存到应用设置中。",
+    "footer": "设备名、空间密码和邀请码仅用于本次操作，不会保存到应用设置中。",
     "mode": "设置方式",
     "working": "处理中...",
     "empty": {
@@ -63,17 +63,18 @@
     },
     "field": {
       "deviceName": "设备名称",
-      "passphrase": "空间口令",
+      "passphrase": "空间密码",
       "invitationCode": "邀请码"
     },
     "flow": {
       "createTitle": "从这台设备开始",
-      "createBody": "确认这台设备的名称，并用空间口令保护新空间。",
+      "createBody": "设置一个空间密码。以后其他设备加入这个空间时，需要输入完全相同的密码。请妥善记住，忘记后无法找回。",
       "joinCodeSheetTitle": "加入空间",
-      "joinCodeTitle": "输入 8 位邀请码",
-      "joinCodeBody": "邀请码显示在已经进入空间的另一台设备上。",
+      "joinCodeTitle": "输入另一台设备上的邀请码",
+      "joinCodeBody": "在已进入空间的设备中打开“添加设备”，即可查看 8 位邀请码。",
+      "pasteInvitation": "从剪贴板粘贴",
       "joinDetailsTitle": "确认这台设备",
-      "joinDetailsBody": "输入相同的空间口令，并确认这台设备的名称。",
+      "joinDetailsBody": "输入创建这个空间时设置的密码。密码一致，这台设备才能加入并同步内容。",
       "continue": "继续",
       "waitingTitle": "空间已创建",
       "waitingForDevice": "正在等待另一台设备",
@@ -277,12 +278,12 @@
     "error": {
       "title": "空间需要处理",
       "deviceNameRequired": "请输入设备名称",
-      "passphraseRequired": "请输入空间口令",
+      "passphraseRequired": "请输入空间密码",
       "invitationCodeRequired": "请输入邀请码",
       "invitationCodeInvalid": "请输入完整的 8 位邀请码",
       "invitationNotFound": "这个邀请码不存在",
       "invitationExpired": "这个邀请码已过期，请让对方重新生成",
-      "passphraseMismatch": "空间口令不正确",
+      "passphraseMismatch": "空间密码不正确，请输入创建空间时设置的密码",
       "sponsorUnreachable": "暂时无法连接另一台设备",
       "connectionTimedOut": "连接超时，请重试",
       "invitationRejected": "另一台设备没有接受这次加入",

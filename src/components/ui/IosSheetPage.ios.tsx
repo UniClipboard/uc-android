@@ -25,7 +25,7 @@ export interface IosSheetFormProps {
 
 const sheetPageBackgroundColor = iosColors?.systemGroupedBackground ?? '#F2F2F7';
 const sheetPageBaseModifiers = [
-  frame({ maxWidth: Infinity, maxHeight: Infinity }),
+  frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'top' }),
   background(sheetPageBackgroundColor),
   ...(iosAccentColor ? [tint(iosAccentColor)] : []),
 ];

@@ -23,7 +23,7 @@
   },
   "space": {
     "title": "My Space",
-    "footer": "The device name, passphrase, and invitation code are used only for this operation and are not saved in app settings.",
+    "footer": "The device name, space password, and invitation code are used only for this operation and are not saved in app settings.",
     "mode": "Setup method",
     "working": "Working...",
     "empty": {
@@ -63,17 +63,18 @@
     },
     "field": {
       "deviceName": "Device name",
-      "passphrase": "Space passphrase",
+      "passphrase": "Space password",
       "invitationCode": "Invitation code"
     },
     "flow": {
       "createTitle": "Make this device the first one",
-      "createBody": "Choose how this device appears and protect the new space with a passphrase.",
+      "createBody": "Set a space password. Every device that joins this space must enter the exact same password. Keep it safe because it cannot be recovered if you forget it.",
       "joinCodeSheetTitle": "Join space",
-      "joinCodeTitle": "Enter the 8-character invitation",
-      "joinCodeBody": "The invitation is shown on a device already in the space.",
+      "joinCodeTitle": "Enter the invitation from another device",
+      "joinCodeBody": "Open Add Device on a device already in the space to find the 8-character invitation.",
+      "pasteInvitation": "Paste from Clipboard",
       "joinDetailsTitle": "Confirm this device",
-      "joinDetailsBody": "Use the same space passphrase, then choose how this device appears.",
+      "joinDetailsBody": "Enter the password that was set when this space was created. This device can join and sync only when the password matches.",
       "continue": "Continue",
       "waitingTitle": "Your space is ready",
       "waitingForDevice": "Waiting for another device",
@@ -277,12 +278,12 @@
     "error": {
       "title": "Space needs attention",
       "deviceNameRequired": "Enter a device name",
-      "passphraseRequired": "Enter the space passphrase",
+      "passphraseRequired": "Enter the space password",
       "invitationCodeRequired": "Enter an invitation code",
       "invitationCodeInvalid": "Enter all 8 invitation characters",
       "invitationNotFound": "This invitation code does not exist",
       "invitationExpired": "This invitation has expired. Ask for a new one",
-      "passphraseMismatch": "The space passphrase is incorrect",
+      "passphraseMismatch": "The space password is incorrect. Enter the password used to create this space",
       "sponsorUnreachable": "The other device cannot be reached right now",
       "connectionTimedOut": "The connection timed out. Try again",
       "invitationRejected": "The other device did not accept this invitation",

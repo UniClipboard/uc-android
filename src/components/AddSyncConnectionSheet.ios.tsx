@@ -23,6 +23,7 @@ import {
   type BottomSheetProps,
 } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   autocorrectionDisabled,
   background,
   buttonStyle,
@@ -68,7 +69,12 @@ import {
   iosKindTints,
 } from '@/theme/iosDesignTokens';
 import { resolveDefaultDeviceName } from '@/utils/deviceName';
-import { formatInvitationCode, normalizeInvitationCodeInput } from '@/utils/invitationCode';
+import * as ClipboardProxy from '@/utils/clipboardProxy';
+import {
+  formatInvitationCode,
+  invitationCodeInputValue,
+  normalizeInvitationCodeInput,
+} from '@/utils/invitationCode';
 import type { AddSyncConnectionSheetProps } from './AddSyncConnectionSheet.types';
 import { useAddSyncConnectionFlow } from './useAddSyncConnectionFlow';
 
@@ -156,6 +162,77 @@ function InvitationActionLabel({ systemName, title }: { systemName: SFSymbol; ti
       <SwiftUIText modifiers={[lineLimit(1), minimumScaleFactor(0.72)]}>{title}</SwiftUIText>
       <Spacer />
     </HStack>
+  );
+}
+
+function InvitationCodeField({
+  code,
+  inputRef,
+  label,
+  nativeText,
+  onTextChange,
+}: {
+  code: string;
+  inputRef: React.RefObject<TextFieldRef | null>;
+  label: string;
+  nativeText: NonNullable<React.ComponentProps<typeof TextField>['text']>;
+  onTextChange: (value: string) => void;
+}) {
+  const normalizedCode = normalizeInvitationCodeInput(code);
+  const codeCells = Array.from({ length: 8 }, (_, index) => index);
+  const groups = [codeCells.slice(0, 4), codeCells.slice(4, 8)];
+
+  return (
+    <VStack spacing={4} modifiers={[frame({ maxWidth: Infinity })]}>
+      <SwiftUIButton
+        onPress={() => inputRef.current?.focus()}
+        modifiers={[buttonStyle('plain'), accessibilityLabel(label)]}
+      >
+        <HStack spacing={14} modifiers={[frame({ maxWidth: Infinity })]}>
+          {groups.map((group, groupIndex) => (
+            <HStack key={groupIndex} spacing={8}>
+              {group.map((index) => {
+                const character = normalizedCode[index] ?? ' ';
+                const isActive = normalizedCode.length < 8 && index === normalizedCode.length;
+
+                return (
+                  <SwiftUIText
+                    key={index}
+                    modifiers={[
+                      font({ size: 22, weight: 'semibold', design: 'monospaced' }),
+                      foregroundStyle(isActive ? 'white' : 'primary'),
+                      multilineTextAlignment('center'),
+                      frame({ width: 36, height: 52 }),
+                      background(
+                        isActive ? JOIN_TINT : iosColors?.tertiarySystemFill ?? '#E5E5EA',
+                        shapes.roundedRectangle({ cornerRadius: 8 })
+                      ),
+                    ]}
+                  >
+                    {character}
+                  </SwiftUIText>
+                );
+              })}
+            </HStack>
+          ))}
+        </HStack>
+      </SwiftUIButton>
+      <TextField
+        ref={inputRef}
+        text={nativeText}
+        onTextChange={onTextChange}
+        maxLength={8}
+        autoFocus
+        modifiers={[
+          textFieldStyle('plain'),
+          keyboardType('ascii-capable'),
+          autocorrectionDisabled(),
+          textInputAutocapitalization('characters'),
+          frame({ height: 1, maxWidth: Infinity }),
+          opacity(0.01),
+        ]}
+      />
+    </VStack>
   );
 }
 
@@ -276,6 +353,7 @@ export function AddSyncConnectionSheet({
   );
   const [sheetDetent, setSheetDetent] = useState<PresentationDetent>('medium');
   const invitationCodeRef = useRef<TextFieldRef>(null);
+  const invitationCodeState = useNativeState('');
   const deviceNameState = useNativeState(defaultDeviceName);
   const passphraseRef = useRef<SecureFieldRef>(null);
   const { state, actions } = useAddSyncConnectionFlow({
@@ -286,6 +364,7 @@ export function AddSyncConnectionSheet({
     onConnected,
     resetNativeFields: (nextDeviceName) => {
       deviceNameState.value = nextDeviceName;
+      invitationCodeState.value = '';
       void passphraseRef.current?.clear();
       void invitationCodeRef.current?.clear();
     },
@@ -323,6 +402,19 @@ export function AddSyncConnectionSheet({
     completeConnection,
   } = actions;
 
+  const handleInvitationCodeChange = (value: string) => {
+    const normalized = invitationCodeInputValue(value);
+    invitationCodeState.value = normalized;
+    updateInvitationCode(normalized);
+  };
+
+  const pasteInvitation = async () => {
+    const normalized = invitationCodeInputValue(await ClipboardProxy.getStringAsync());
+    invitationCodeState.value = normalized;
+    updateInvitationCode(normalized);
+    if (normalized.length < 8) void invitationCodeRef.current?.focus();
+  };
+
   useEffect(() => {
     const fullHeight = mode === 'invitation' || mode === 'success';
     setSheetDetent(fullHeight ? 'large' : 'medium');
@@ -339,7 +431,7 @@ export function AddSyncConnectionSheet({
       : mode === 'success'
       ? t('space.flow.successTitle')
       : t('connection.addSheetTitle');
-  const canGoBack = mode === 'create' || mode === 'joinCode' || mode === 'joinDetails';
+  const canGoBack = mode === 'joinDetails';
   const Sheet = persistentPresentation ? PersistentBottomSheet : BottomSheet;
 
   return (
@@ -417,6 +509,7 @@ export function AddSyncConnectionSheet({
                     ref={passphraseRef}
                     placeholder={t('space.field.passphrase')}
                     onTextChange={setPassphrase}
+                    autoFocus
                     modifiers={[frame({ minHeight: 30 })]}
                   />
                 </Section>
@@ -447,40 +540,50 @@ export function AddSyncConnectionSheet({
             ) : null}
 
             {mode === 'joinCode' ? (
-              <IosSheetForm>
-                <Section footer={<SwiftUIText>{t('space.flow.joinCodeBody')}</SwiftUIText>}>
-                  <TextField
-                    ref={invitationCodeRef}
-                    placeholder="XXXXXXXX"
-                    onTextChange={updateInvitationCode}
-                    maxLength={8}
-                    autoFocus
-                    modifiers={[
-                      textFieldStyle('plain'),
-                      keyboardType('ascii-capable'),
-                      autocorrectionDisabled(),
-                      textInputAutocapitalization('characters'),
-                      multilineTextAlignment('center'),
-                      font({ size: 28, weight: 'semibold', design: 'monospaced' }),
-                      frame({ minHeight: 54, maxWidth: Infinity }),
-                    ]}
-                  />
-                </Section>
+              <VStack
+                spacing={18}
+                alignment="center"
+                modifiers={[padding({ horizontal: 20 }), frame({ maxWidth: Infinity })]}
+              >
+                <VStack spacing={4} alignment="center">
+                  <SwiftUIText>{t('space.flow.joinCodeTitle')}</SwiftUIText>
+                  <SwiftUIText
+                    modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}
+                  >
+                    {t('space.flow.joinCodeBody')}
+                  </SwiftUIText>
+                </VStack>
+                <InvitationCodeField
+                  code={invitationCode}
+                  inputRef={invitationCodeRef}
+                  label={t('space.flow.joinCodeTitle')}
+                  nativeText={invitationCodeState}
+                  onTextChange={handleInvitationCodeChange}
+                />
+                {error ? (
+                  <HStack spacing={6} modifiers={[frame({ maxWidth: Infinity })]}>
+                    <Image systemName="exclamationmark.circle.fill" size={15} color="#FF3B30" />
+                    <SwiftUIText modifiers={[font({ size: 13 }), foregroundStyle('red')]}>
+                      {error}
+                    </SwiftUIText>
+                  </HStack>
+                ) : null}
+                <SwiftUIButton
+                  systemImage="doc.on.clipboard"
+                  label={t('space.flow.pasteInvitation')}
+                  onPress={() => void pasteInvitation()}
+                  modifiers={[buttonStyle('plain')]}
+                />
                 <SwiftUIButton
                   onPress={continueFromCode}
                   modifiers={[
-                    ...iosProminentButtonModifiers(undefined, {
-                      fullWidth: true,
-                    }),
+                    ...iosProminentButtonModifiers(undefined, { fullWidth: true }),
                     controlSize('large'),
                     disabled(!codeComplete),
-                    opacity(codeComplete ? 1 : 0.32),
-                    listRowBackground(SHEET_BACKGROUND),
-                    listRowSeparator('hidden'),
-                    listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 }),
+                    opacity(codeComplete ? 1 : 0.28),
                   ]}
                 >
-                  <HStack modifiers={[frame({ minHeight: 48, maxWidth: Infinity })]}>
+                  <HStack modifiers={[frame({ minHeight: 46, maxWidth: Infinity })]}>
                     <Spacer />
                     <SwiftUIText modifiers={[font({ weight: 'semibold' })]}>
                       {t('space.flow.continue')}
@@ -488,7 +591,7 @@ export function AddSyncConnectionSheet({
                     <Spacer />
                   </HStack>
                 </SwiftUIButton>
-              </IosSheetForm>
+              </VStack>
             ) : null}
 
             {mode === 'joinDetails' ? (
@@ -697,7 +800,7 @@ export function AddSyncConnectionSheet({
               </IosSheetForm>
             ) : null}
 
-            {error ? (
+            {error && mode !== 'joinCode' ? (
               <IosSheetForm>
                 <Section>
                   <HStack spacing={8}>

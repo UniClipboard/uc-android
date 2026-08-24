@@ -13,6 +13,9 @@ describe('iOS sheet page shared background', () => {
     expect(pageSource).toContain('IosSheetForm');
     expect(pageSource).toContain('iosColors?.systemGroupedBackground');
     expect(pageSource).toContain('background(sheetPageBackgroundColor)');
+    expect(pageSource).toContain(
+      "frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'top' })"
+    );
     expect(pageSource).toContain('scrollContentBackground');
     expect(indexSource).toContain("export { IosSheetPage, IosSheetForm } from './IosSheetPage'");
   });
