@@ -9,31 +9,10 @@ import type {
 } from './HomeTopBar.types';
 import { HistoryFilterTags } from '@/components/HistoryFilterTags';
 
-export function DefaultTopBar({
-  onOpenSpace,
-  onSearch,
-  onSettings,
-  onSelectMode,
-  theme,
-}: DefaultTopBarProps) {
+export function DefaultTopBar({ onSearch, onSettings, onSelectMode, theme }: DefaultTopBarProps) {
   const { t } = useTranslation('home');
   return (
     <View style={s.row}>
-      <Pressable
-        onPress={onOpenSpace}
-        style={({ pressed }) => [
-          s.spaceStatus,
-          { backgroundColor: theme.colors.surfaceHigh },
-          pressed && { opacity: 0.7 },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={t('topBar.openSpaceA11y')}
-      >
-        <Text style={[s.label, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-          {t('topBar.mySpace')}
-        </Text>
-        <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
-      </Pressable>
       <View style={s.actions}>
         <Pressable
           onPress={onSelectMode}
@@ -175,18 +154,7 @@ export function SelectModeTopBar({
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 52 },
-  spaceStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexShrink: 1,
-    height: 36,
-    paddingLeft: 12,
-    paddingRight: 10,
-    borderRadius: 18,
-  },
-  label: { fontSize: 14, fontWeight: '600' },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginLeft: 'auto' },
   iconBtn: { justifyContent: 'center', alignItems: 'center' },
   selectCount: { fontSize: 14, fontWeight: '600' },
   pill: {

@@ -44,26 +44,15 @@ describe('home content routing', () => {
     expect(controller).not.toContain('refreshSelectedConnection');
   });
 
-  it('keeps a fixed My Space entry without a connection indicator', () => {
+  it('keeps My Space management out of the Home header', () => {
     for (const topBar of topBars) {
-      expect(topBar).toContain("t('topBar.mySpace')");
-      expect(topBar).toContain('onOpenSpace');
-      expect(topBar).not.toContain('spaceLabel');
-      expect(topBar).not.toContain('ConnectionStatusDot');
-      expect(topBar).not.toContain('STATUS_STYLE');
-      expect(topBar).not.toContain('CONNECTION_STATUS_TEXT');
+      expect(topBar).not.toContain("t('topBar.mySpace')");
+      expect(topBar).not.toContain('onOpenSpace');
     }
 
-    expect(topBarTypes).not.toContain('connectionStatus');
-    expect(topBarTypes).not.toContain('spaceLabel');
-    expect(homeChrome).not.toContain('connectionStatus={c.connectionStatus}');
-
-    for (const locale of ['en', 'pt-BR', 'ru', 'zh']) {
-      const home = JSON.parse(
-        fs.readFileSync(path.resolve(__dirname, `../i18n/locales/${locale}/home.json`), 'utf8')
-      );
-      expect(home.topBar.mySpace).toEqual(expect.any(String));
-      expect(home.topBar.openSpaceA11y).not.toContain('{{space}}');
-    }
+    expect(topBarTypes).not.toContain('onOpenSpace');
+    expect(homeChrome).not.toContain('setShowMySpace');
+    expect(controller).not.toContain('showMySpace');
+    expect(controller).not.toContain('setShowMySpace');
   });
 });

@@ -24,10 +24,7 @@
   "topBar": {
     "selectedCount": "已选择 {{n}} 项",
     "deselectAll": "取消全选",
-    "searchPlaceholder": "搜索剪贴板",
-    "mySpace": "我的空间",
-    "openSpaceA11y": "打开我的空间",
-    "spaceUnconfigured": "尚未加入"
+    "searchPlaceholder": "搜索剪贴板"
   },
   "a11y": {
     "addContent": "添加内容",

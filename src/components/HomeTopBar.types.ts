@@ -3,7 +3,6 @@ import type { DisplayKind } from '@/utils/displayKind';
 import type { HistoryDateFilter } from '@/utils/historyFilters';
 
 export interface DefaultTopBarProps {
-  onOpenSpace: () => void;
   onSearch: () => void;
   onSettings: () => void;
   onSelectMode: () => void;

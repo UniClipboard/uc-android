@@ -24,10 +24,7 @@
   "topBar": {
     "selectedCount": "{{n}} selecionados",
     "deselectAll": "Desmarcar tudo",
-    "searchPlaceholder": "Pesquisar na área de transferência",
-    "mySpace": "Meu espaço",
-    "openSpaceA11y": "Abrir Meu espaço",
-    "spaceUnconfigured": "Não conectado"
+    "searchPlaceholder": "Pesquisar na área de transferência"
   },
   "a11y": {
     "addContent": "Adicionar conteúdo",

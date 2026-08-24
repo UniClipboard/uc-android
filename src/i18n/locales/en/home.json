@@ -24,10 +24,7 @@
   "topBar": {
     "selectedCount": "{{n}} selected",
     "deselectAll": "Deselect all",
-    "searchPlaceholder": "Search clipboard",
-    "mySpace": "My Space",
-    "openSpaceA11y": "Open My Space",
-    "spaceUnconfigured": "Not joined"
+    "searchPlaceholder": "Search clipboard"
   },
   "a11y": {
     "addContent": "Add content",

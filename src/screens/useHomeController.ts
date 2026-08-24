@@ -14,7 +14,6 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useErrorStore } from '@/stores/errorStore';
 import { notifyDeviceClipboardChanged } from '@/features/transfer';
 import { useUnifiedEngineStore } from '@/stores/unifiedEngineStore';
-import { useUnifiedSpaceStore } from '@/features/space';
 import { historyStorage } from '@/features/history';
 import { getUnifiedSyncRuntime } from '@/features/sync';
 import { getUnifiedSpaceService } from '@/features/space';
@@ -79,8 +78,6 @@ export function useHomeController(onOpenSettings: () => void) {
   const showMessage = useMessageStore((s) => s.showMessage);
   const clearError = useErrorStore((s) => s.clearError);
 
-  const p2pSpaceId = useUnifiedSpaceStore((s) => s.spaceId);
-
   const p2pRefreshRevision = useUnifiedEngineStore((s) => s.refreshRevision);
 
   // UI state
@@ -96,7 +93,6 @@ export function useHomeController(onOpenSettings: () => void) {
     anchor: CardAnchorRect | null;
   } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [showMySpace, setShowMySpace] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
 
@@ -701,10 +697,6 @@ export function useHomeController(onOpenSettings: () => void) {
     handleClearFilterKinds,
     showFilterSheet,
     setShowFilterSheet,
-    // space
-    p2pSpaceId,
-    showMySpace,
-    setShowMySpace,
     // grid
     listRef,
     keyExtractor,

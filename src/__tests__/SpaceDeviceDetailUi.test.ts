@@ -63,7 +63,7 @@ describe('shared Space device detail UI', () => {
     }
   });
 
-  it('uses one controller from Home and both Settings implementations', () => {
+  it('uses one controller from invitations and both Settings implementations', () => {
     const hook = source('components/useSpaceDeviceManagement.ts');
     const home = source('components/useMySpaceSheet.ts');
     const android = source('screens/settings/UnifiedSpaceSetup.android.tsx');
@@ -102,16 +102,10 @@ describe('shared Space device detail UI', () => {
     expect(iosRemoveAction).toContain('showsChevron={false}');
   });
 
-  it('keeps the iOS detail sheet in the existing SwiftUI host to avoid parent-page flashes', () => {
-    const homeLayout = source('components/MySpaceLayout.ios.tsx');
-    const p2pContent = source('components/P2pMySpaceContent.ios.tsx');
+  it('keeps the iOS detail sheet in the stable Settings host to avoid parent-page flashes', () => {
     const settings = source('screens/SettingsScreen.ios.tsx');
     const spacePage = source('screens/settings/ios/SpacePage.tsx');
-    const host = homeLayout.match(/<Host[\s\S]*?<\/Host>/)?.[0];
 
-    expect(host).toContain('{supplementary}');
-    expect(p2pContent).toContain('<SpaceDeviceDetail');
-    expect(p2pContent).toContain('supplementary={deviceDetail}');
     expect(settings).toContain('useSpaceDeviceManagement({ allowHighImpactActions: true })');
     expect(settings).toContain('<SpaceDeviceDetail');
     expect(spacePage).not.toContain('<SpaceDeviceDetail');

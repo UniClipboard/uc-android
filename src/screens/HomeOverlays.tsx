@@ -1,7 +1,6 @@
 import React from 'react';
 import { ConnectedMessageToast } from '@/components/ConnectedMessageToast';
 import { HistoryFilterSheet } from '@/components/HistoryFilterSheet';
-import { MySpaceSheet } from '@/components/MySpaceSheet';
 import { ShareSendSheet } from '@/components/ShareSendSheet';
 import { WordPickerOverlay } from '@/components/WordPickerOverlay';
 import { CardContextOverlay } from '@/components/CardContextOverlay';
@@ -37,8 +36,6 @@ export function HomeOverlays({ c }: { c: HomeController }) {
         onClose={() => c.setShowFilterSheet(false)}
         theme={c.theme}
       />
-
-      <MySpaceSheet visible={c.showMySpace} onClose={() => c.setShowMySpace(false)} />
 
       <ShareSendSheet
         visible={shareVisible}

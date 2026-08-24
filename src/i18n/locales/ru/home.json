@@ -24,10 +24,7 @@
   "topBar": {
     "selectedCount": "Выбрано: {{n}}",
     "deselectAll": "Снять выделение",
-    "searchPlaceholder": "Поиск в буфере обмена",
-    "mySpace": "Мое пространство",
-    "openSpaceA11y": "Открыть мое пространство",
-    "spaceUnconfigured": "Не присоединено"
+    "searchPlaceholder": "Поиск в буфере обмена"
   },
   "a11y": {
     "addContent": "Добавить содержимое",

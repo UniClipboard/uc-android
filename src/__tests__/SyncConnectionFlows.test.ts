@@ -235,7 +235,7 @@ describe('unified sync connection flows', () => {
     const overlays = source('screens/HomeOverlays.tsx');
 
     expect(overlays).not.toContain('AddSyncConnectionSheet');
-    expect(overlays).toContain('MySpaceSheet');
+    expect(overlays).not.toContain('MySpaceSheet');
     expect(overlays).not.toContain('legacyLan');
     expect(overlays).not.toContain('AddServer');
   });

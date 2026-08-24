@@ -33,7 +33,6 @@ export function HomeTopBarArea({ c }: { c: HomeController }) {
         />
       ) : (
         <DefaultTopBar
-          onOpenSpace={() => c.setShowMySpace(true)}
           onSearch={c.openSearch}
           onSettings={c.onOpenSettings}
           theme={c.theme}

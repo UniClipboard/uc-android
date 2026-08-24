@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Ellipsis, ListFilter, Search, X, XCircle } from 'lucide-react-native';
+import { Ellipsis, ListFilter, Search, X, XCircle } from 'lucide-react-native';
 import { Menu, Button as SwiftUIButton, Host } from '@expo/ui/swift-ui';
 import Animated, {
   useSharedValue,
@@ -21,33 +21,10 @@ import { HistoryFilterTags } from '@/components/HistoryFilterTags';
 
 const BTN = iosDimensions.floatingButtonSize;
 
-export function DefaultTopBar({
-  onOpenSpace,
-  onSearch,
-  onSettings,
-  onSelectMode,
-  theme,
-}: DefaultTopBarProps) {
+export function DefaultTopBar({ onSearch, onSettings, onSelectMode, theme }: DefaultTopBarProps) {
   const { t } = useTranslation('home');
   return (
     <View style={s.row}>
-      <Pressable
-        onPress={onOpenSpace}
-        style={s.spacePress}
-        accessibilityRole="button"
-        accessibilityLabel={t('topBar.openSpaceA11y')}
-      >
-        <GlassContainer shape="capsule" interactive style={s.spacePill}>
-          <Text
-            style={[s.label, s.labelShrink, { color: theme.colors.textPrimary }]}
-            numberOfLines={1}
-          >
-            {t('topBar.mySpace')}
-          </Text>
-          <ChevronDown size={15} color={theme.colors.textSecondary} />
-        </GlassContainer>
-      </Pressable>
-
       <View style={{ flex: 1, minWidth: 0 }} />
 
       <View style={s.actions}>
@@ -235,16 +212,6 @@ export function SelectModeTopBar({
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 52 },
-  spacePress: { flexShrink: 1 },
-  spacePill: {
-    height: BTN,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-  },
-  label: { fontSize: 14, fontWeight: '600' },
-  labelShrink: { flexShrink: 1 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   selectCount: { fontSize: 14, fontWeight: '600' },
   searchWrap: { gap: 6 },
