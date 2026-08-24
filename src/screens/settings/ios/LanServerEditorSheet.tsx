@@ -86,7 +86,6 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
     visible: props.visible,
     serverId: props.serverId,
     initialIntent: props.initialIntent,
-    selectAfterSave: props.selectAfterSave,
     onFinished: props.onClose,
   });
   const handleScan = useCallback(async () => {
@@ -259,13 +258,6 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
               {editor.error ? <Section><SwiftUIText>{editor.error}</SwiftUIText></Section> : null}
 
               <Section>
-                {props.serverId && !editor.isActive ? (
-                  <Button
-                    label={t('lan.makeActive')}
-                    onPress={() => void editor.select()}
-                    modifiers={[disabled(editor.pending)]}
-                  />
-                ) : null}
                 {props.serverId ? (
                   <SettingsNavRow
                     title={t('action.delete', { ns: 'common' })}

@@ -7,9 +7,7 @@ import { useLanMySpaceSheet } from '@/components/useLanMySpaceSheet';
 
 const mockGetDraft = jest.fn();
 const mockProbeLanServers = jest.fn();
-let mockSettingsConfig:
-  | { lanServers: typeof profiles; activeLanServerId: string | null }
-  | undefined;
+let mockSettingsConfig: { lanServers: typeof profiles } | undefined;
 
 const profiles = [
   {
@@ -52,7 +50,7 @@ function Harness({ visible }: { visible: boolean }) {
 describe('useLanMySpaceSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSettingsConfig = { lanServers: profiles, activeLanServerId: 'home' };
+    mockSettingsConfig = { lanServers: profiles };
     mockGetDraft.mockImplementation(async (serverId: string) => {
       const profile = profiles.find((server) => server.id === serverId)!;
       return { ...profile, password: `${serverId}-secret` };
@@ -93,7 +91,7 @@ describe('useLanMySpaceSheet', () => {
     expect(mockProbeLanServers).not.toHaveBeenCalled();
   });
 
-  it('checks every configured server and preserves the active selection', async () => {
+  it('checks every configured server without marking a current server', async () => {
     await act(async () => {
       renderer = TestRenderer.create(<Harness visible />);
       await Promise.resolve();
@@ -103,9 +101,10 @@ describe('useLanMySpaceSheet', () => {
     expect(mockGetDraft).toHaveBeenCalledTimes(2);
     expect(mockProbeLanServers).toHaveBeenCalledTimes(2);
     expect(current.servers).toEqual([
-      expect.objectContaining({ id: 'home', isActive: true, status: 'online' }),
-      expect.objectContaining({ id: 'office', isActive: false, status: 'authFailed' }),
+      expect.objectContaining({ id: 'home', status: 'online' }),
+      expect.objectContaining({ id: 'office', status: 'authFailed' }),
     ]);
+    expect(current.servers.every((server) => !('isActive' in server))).toBe(true);
     expect(current.isUnconfigured).toBe(false);
     expect(current.isRefreshing).toBe(false);
   });

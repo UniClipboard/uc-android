@@ -299,7 +299,6 @@
     "summary": "管理同步连接",
     "configuredCount_one": "{{count}} 台",
     "configuredCount_other": "{{count}} 台",
-    "active": "当前",
     "add": "添加服务器",
     "edit": "编辑服务器",
     "scan": "扫描连接二维码",
@@ -338,7 +337,6 @@
         "MissingFields": "请填写凭据"
       }
     },
-    "makeActive": "设为当前服务器",
     "deleteTitle": "删除服务器",
     "deleteMessage": "服务器资料和保存的密码都会从本机删除。",
     "notAvailableYet": "连接资料保存在本机，密码保存在系统安全区域。",

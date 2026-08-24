@@ -1,24 +1,31 @@
-import { Section, Text as SwiftUIText } from '@expo/ui/swift-ui';
+import { Section } from '@expo/ui/swift-ui';
 import { useTranslation } from 'react-i18next';
 
 import { IosSheetForm, IosSheetPage } from '@/components/ui';
+import type { AddSyncConnectionMode } from '@/components/AddSyncConnectionSheet.types';
+import type { SpaceDeviceManagementController } from '@/components/useSpaceDeviceManagement';
 import { useSettingsStore } from '@/stores';
-import type { SettingsPage } from './types';
-import { HeaderCircleButton, SettingsNavRow, settingsTileColors } from './common';
+import { HeaderCircleButton, SettingsNavRow } from './common';
+import { LanServersPage } from './LanServersPage';
+import { SpacePage } from './SpacePage';
 
 export function SyncChannelPage({
   onBack,
-  onNavigate,
+  onAddLanServer,
+  onEditLanServer,
+  onOpenInvitation,
+  onOpenSetup,
+  deviceManagement,
 }: {
   onBack(): void;
-  onNavigate(page: SettingsPage): void;
+  onAddLanServer(): void;
+  onEditLanServer(serverId: string): void;
+  onOpenInvitation(): void;
+  onOpenSetup(mode: AddSyncConnectionMode): void;
+  deviceManagement: SpaceDeviceManagementController;
 }) {
   const { t } = useTranslation('settings');
   const syncChannel = useSettingsStore((state) => state.config?.syncChannel ?? 'lan');
-  const activeServer = useSettingsStore((state) => {
-    const config = state.config;
-    return config?.lanServers.find((server) => server.id === config.activeLanServerId) ?? null;
-  });
 
   const handleSyncChannel = async (channel: 'lan' | 'p2p') => {
     if (channel === syncChannel) return;
@@ -50,24 +57,22 @@ export function SyncChannelPage({
           />
         </Section>
 
-        <Section header={<SwiftUIText>{t('syncChannel.currentConnection')}</SwiftUIText>}>
-          {syncChannel === 'lan' ? (
-            <SettingsNavRow
-              icon="server.rack"
-              iconColor={settingsTileColors.blue}
-              title={t('syncChannel.connectionSettings')}
-              value={activeServer?.name || activeServer?.urls[0] || t('syncChannel.notConfigured')}
-              onPress={() => onNavigate('lanServers')}
-            />
-          ) : (
-            <SettingsNavRow
-              icon="person.2"
-              iconColor={settingsTileColors.indigo}
-              title={t('space.title', { ns: 'settingsSync' })}
-              onPress={() => onNavigate('space')}
-            />
-          )}
-        </Section>
+        {syncChannel === 'lan' ? (
+          <LanServersPage
+            embedded
+            onBack={onBack}
+            onAdd={onAddLanServer}
+            onEdit={onEditLanServer}
+          />
+        ) : (
+          <SpacePage
+            embedded
+            onBack={onBack}
+            onOpenInvitation={onOpenInvitation}
+            onOpenSetup={onOpenSetup}
+            deviceManagement={deviceManagement}
+          />
+        )}
       </IosSheetForm>
     </IosSheetPage>
   );

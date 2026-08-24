@@ -211,6 +211,165 @@ describe('LanSyncAdapter', () => {
     await adapter.stop();
   });
 
+  it('automatically sends imported text to every configured LAN server', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const office = {
+      ...profile,
+      name: 'Office',
+      urls: ['http://office.local:42720'],
+    };
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async (server: typeof profile) => ({ url: server.urls[0] })),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer: async () => profile,
+      getServers: async () => [profile, office],
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+    client.putClipboard.mockClear();
+
+    await expect(adapter.sendImportedText('automatic', 'AUTO_HASH')).resolves.toEqual({
+      success: true,
+      state: 'delivered',
+      counts: { accepted: 2, duplicate: 0, offline: 0, errored: 0, pending: 0 },
+    });
+    expect(client.putClipboard).toHaveBeenCalledTimes(2);
+    expect(client.putClipboard).toHaveBeenCalledWith(profile, expect.any(Object));
+    expect(client.putClipboard).toHaveBeenCalledWith(office, expect.any(Object));
+    await adapter.stop();
+  });
+
+  it('automatically sends captured clipboard content to every configured LAN server', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const office = {
+      ...profile,
+      name: 'Office',
+      urls: ['http://office.local:42720'],
+    };
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async (server: typeof profile) => ({ url: server.urls[0] })),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer: async () => profile,
+      getServers: async () => [profile, office],
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+    client.putClipboard.mockClear();
+
+    await expect(
+      adapter.observeClipboardChange(
+        { type: 'Text', text: 'captured', profileHash: 'CAPTURED_HASH' },
+        true
+      )
+    ).resolves.toEqual({
+      success: true,
+      state: 'delivered',
+      counts: { accepted: 2, duplicate: 0, offline: 0, errored: 0, pending: 0 },
+    });
+    expect(client.putClipboard).toHaveBeenCalledTimes(2);
+    await adapter.stop();
+  });
+
+  it('keeps sending automatic content when one configured LAN server is unavailable', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const office = {
+      ...profile,
+      name: 'Office',
+      urls: ['http://office.local:42720'],
+    };
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async (server: typeof profile) => {
+        if (server.name === 'Office') throw new Error('office unavailable');
+        return { url: server.urls[0] };
+      }),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer: async () => profile,
+      getServers: async () => [profile, office],
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+    client.putClipboard.mockClear();
+
+    await expect(adapter.sendImportedText('automatic', 'AUTO_HASH')).resolves.toEqual({
+      success: true,
+      state: 'partial',
+      counts: { accepted: 1, duplicate: 0, offline: 0, errored: 1, pending: 0 },
+    });
+    expect(client.putClipboard).toHaveBeenCalledTimes(2);
+    await adapter.stop();
+  });
+
+  it('does not expand explicit LAN targets to other configured servers', async () => {
+    const LanSyncAdapter = loadAdapter();
+    expect(LanSyncAdapter).toBeDefined();
+    if (!LanSyncAdapter) return;
+    const office = {
+      ...profile,
+      name: 'Office',
+      urls: ['http://office.local:42720'],
+    };
+    const getServers = jest.fn(async () => [profile, office]);
+    const client = {
+      getClipboard: jest.fn(async () => null),
+      putClipboard: jest.fn(async (server: typeof profile) => ({ url: server.urls[0] })),
+    };
+    const adapter = new LanSyncAdapter({
+      getServer: async (serverId?: string) => (serverId === 'office' ? office : profile),
+      getServers,
+      readClipboard: async () => null,
+      applyRemoteContent: async () => undefined,
+      preparePayloadTempUri: jest.fn(),
+      client,
+    });
+    await adapter.start({
+      appVersion: '2.0.0',
+      profileId: 'default',
+      policy: { appState: 'active', backgroundSyncEnabled: false },
+    });
+    client.putClipboard.mockClear();
+    getServers.mockClear();
+
+    await adapter.sendImportedText('shared', 'SHARE_HASH', { targetIds: ['office'] });
+
+    expect(getServers).not.toHaveBeenCalled();
+    expect(client.putClipboard).toHaveBeenCalledTimes(1);
+    expect(client.putClipboard).toHaveBeenCalledWith(office, expect.any(Object));
+    await adapter.stop();
+  });
+
   it('reports partial delivery when one selected LAN server fails', async () => {
     const LanSyncAdapter = loadAdapter();
     expect(LanSyncAdapter).toBeDefined();

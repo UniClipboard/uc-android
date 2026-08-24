@@ -15,7 +15,6 @@ export interface SharedSettings {
   /** Relay addresses are non-sensitive; access tokens stay in native secure storage. */
   customRelayUrls: string[];
   lanServers: LanServerProfile[];
-  activeLanServerId: string | null;
 
   // Attachment & cache
   attachmentAutoDownload: 'wifi' | 'always' | 'off';
@@ -86,7 +85,6 @@ export const SHARED_DEFAULTS: SharedSettings = {
   autoPushLocal: true,
   customRelayUrls: [],
   lanServers: [],
-  activeLanServerId: null,
 
   attachmentAutoDownload: 'wifi',
   payloadCacheMaxBytes: 200 * 1024 * 1024,
@@ -156,4 +154,4 @@ export const RUNTIME_STATE_DEFAULTS: RuntimeState = {
   needsHistoryReorganize: false,
 };
 
-export const SETTINGS_SCHEMA_VERSION = 12;
+export const SETTINGS_SCHEMA_VERSION = 13;

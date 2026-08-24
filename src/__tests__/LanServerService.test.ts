@@ -5,7 +5,6 @@ function loadLanServerService():
       save(draft: unknown, serverId?: string): Promise<unknown>;
       getDraft(serverId: string): Promise<unknown>;
       remove(serverId: string): Promise<void>;
-      select(serverId: string): Promise<void>;
     })
   | undefined {
   try {
@@ -29,7 +28,7 @@ function loadLanServerModule():
 }
 
 function dependencies() {
-  let state = { servers: [] as unknown[], activeServerId: null as string | null };
+  let state = { servers: [] as unknown[] };
   const secrets = new Map<string, string>();
   let nextWriteError: Error | null = null;
   return {
@@ -98,7 +97,6 @@ describe('LanServerService', () => {
           allowInsecureTls: false,
         },
       ],
-      activeServerId: 'lan-1',
     });
     expect(JSON.stringify(deps.getState())).not.toContain('secret password');
     expect(deps.getSecret('lan-1')).toBe('secret password');
@@ -183,7 +181,7 @@ describe('LanServerService', () => {
     ]);
   });
 
-  it('removes a server and selects the next available server', async () => {
+  it('removes a server without maintaining a current-server field', async () => {
     const LanServerService = loadLanServerService();
     expect(LanServerService).toBeDefined();
     if (!LanServerService) return;
@@ -205,21 +203,8 @@ describe('LanServerService', () => {
 
     expect(deps.getState()).toEqual({
       servers: [expect.objectContaining({ id: 'lan-2' })],
-      activeServerId: 'lan-2',
     });
     expect(deps.getSecret('lan-1')).toBeUndefined();
-  });
-
-  it('rejects selecting an unknown server', async () => {
-    const LanServerService = loadLanServerService();
-    expect(LanServerService).toBeDefined();
-    if (!LanServerService) return;
-
-    const deps = dependencies();
-    const service = new LanServerService(deps);
-
-    await expect(service.select('missing')).rejects.toThrow('LAN server not found');
-    expect(deps.settings.write).not.toHaveBeenCalled();
   });
 
   it('configures one shared LAN server service', () => {

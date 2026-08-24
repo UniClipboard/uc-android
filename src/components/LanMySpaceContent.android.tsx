@@ -33,7 +33,6 @@ import {
 
 const ICONS = {
   add: require('../assets/icons/add.xml'),
-  check: require('../assets/icons/check_circle.xml'),
   chevron: require('../assets/icons/chevron_right.xml'),
   status: require('../assets/icons/circle.xml'),
 };
@@ -52,9 +51,7 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
     if (!visible) setEditingServerId(null);
   }, [visible]);
 
-  const activeServer = servers.find((server) => server.isActive) ?? null;
-  const otherServers = servers.filter((server) => !server.isActive);
-  const sectionCount = Number(Boolean(activeServer)) + Number(otherServers.length > 0);
+  const sectionCount = Number(servers.length > 0);
   const contentHeight = Math.min(
     Math.max(
       servers.length * 88 + sectionCount * 24 + Math.max(sectionCount - 1, 0) * 12 + 20,
@@ -77,7 +74,6 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
         <LanServerEditorSheet
           visible={editingServerId !== null}
           serverId={editingServerId && editingServerId !== 'new' ? editingServerId : null}
-          selectAfterSave={editingServerId === 'new'}
           onClose={() => setEditingServerId(null)}
         />
       }
@@ -98,29 +94,8 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
         </ListItem>
       ) : null}
 
-      {activeServer ? (
+      {servers.length > 0 ? (
         <Column modifiers={[fillMaxWidth()]}>
-          <ComposeText style={SECTION_STYLE} color={colors.onSurfaceVariant}>
-            {t('syncChannel.currentConnection', { ns: 'settings' })}
-          </ComposeText>
-          <Spacer modifiers={[height(6)]} />
-          <Surface
-            color={colors.surfaceContainerLow}
-            border={{ color: colors.outlineVariant }}
-            shape={SERVER_LIST_SHAPE}
-            modifiers={[fillMaxWidth()]}
-          >
-            <LanServerRow
-              server={activeServer}
-              onPress={() => setEditingServerId(activeServer.id)}
-            />
-          </Surface>
-        </Column>
-      ) : null}
-
-      {otherServers.length > 0 ? (
-        <Column modifiers={[fillMaxWidth()]}>
-          {activeServer ? <Spacer modifiers={[height(12)]} /> : null}
           <ComposeText style={SECTION_STYLE} color={colors.onSurfaceVariant}>
             {t('lan.title', { ns: 'settingsSync' })}
           </ComposeText>
@@ -132,10 +107,10 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
             modifiers={[fillMaxWidth()]}
           >
             <Column>
-              {otherServers.map((server, index) => (
+              {servers.map((server, index) => (
                 <React.Fragment key={server.id}>
                   <LanServerRow server={server} onPress={() => setEditingServerId(server.id)} />
-                  {index < otherServers.length - 1 ? (
+                  {index < servers.length - 1 ? (
                     <HorizontalDivider color={colors.outlineVariant} modifiers={[fillMaxWidth()]} />
                   ) : null}
                 </React.Fragment>
@@ -170,11 +145,7 @@ function LanServerRow({ server, onPress }: { server: LanMySpaceServerView; onPre
         <ComposeText color={statusColor}>{statusLabel(server.status, t)}</ComposeText>
       </Column>
       <Spacer modifiers={[width(12)]} />
-      <Icon
-        source={server.isActive ? ICONS.check : ICONS.chevron}
-        size={20}
-        tint={server.isActive ? colors.primary : colors.onSurfaceVariant}
-      />
+      <Icon source={ICONS.chevron} size={20} tint={colors.onSurfaceVariant} />
     </Row>
   );
 }

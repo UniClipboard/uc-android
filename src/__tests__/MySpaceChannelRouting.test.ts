@@ -49,10 +49,11 @@ describe('Home My Space channel routing', () => {
     expect(settingsPage).not.toContain('<ModalBottomSheet');
   });
 
-  it('shows the current server, address, and connection state on both platforms', () => {
+  it('shows every server, address, and connection state without a current-server group', () => {
     for (const platform of platforms) {
       const lan = read(`components/LanMySpaceContent.${platform}.tsx`);
-      expect(lan).toContain("'syncChannel.currentConnection'");
+      expect(lan).not.toContain("'syncChannel.currentConnection'");
+      expect(lan).toContain("'lan.title'");
       expect(lan).toContain('server.address');
       expect(lan).toContain('statusLabel(server.status');
       expect(lan).toContain("'syncChannel.notConfigured'");

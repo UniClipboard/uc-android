@@ -5,17 +5,17 @@ const root = path.resolve(__dirname, '..', '..');
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('iOS keyboard selected sync transport', () => {
-  it('shares the main app selection and active LAN profile without putting the password in settings', () => {
+  it('shares the selected sync method and LAN profiles without a current-server field', () => {
     const dto = read('src/platform/app-group/appGroupAdapter.ts');
     const sharedSettings = read('modules/app-group-store/ios/Shared/AppSettings.swift');
 
     expect(dto).toContain("syncChannel?: 'lan' | 'p2p'");
     expect(dto).toContain('lanServers?: AppGroupLanServerDTO[]');
-    expect(dto).toContain('activeLanServerId?: string | null');
+    expect(dto).not.toContain('activeLanServerId');
     expect(dto).not.toMatch(/AppGroupLanServerDTO[\s\S]{0,300}password/);
     expect(sharedSettings).toContain('public var syncChannel: SyncChannel');
     expect(sharedSettings).toContain('public var lanServers: [LanServerProfile]');
-    expect(sharedSettings).toContain('public var activeLanServerId: String?');
+    expect(sharedSettings).not.toContain('activeLanServerId');
   });
 
   it('stores LAN passwords in the keychain shared with the keyboard extension', () => {
@@ -45,6 +45,7 @@ describe('iOS keyboard selected sync transport', () => {
     expect(lan).toContain('httpMethod = "PUT"');
     expect(lan).toContain('httpMethod = "GET"');
     expect(lan).toContain('Authorization');
+    expect(lan).toContain('for (_, client) in currentClients');
   });
 
   it('switches away from the old transport even when its receive wait fails', () => {

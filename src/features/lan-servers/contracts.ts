@@ -12,7 +12,6 @@ export interface LanServerDraft {
 
 export interface LanServerSettingsSnapshot {
   servers: LanServerProfile[];
-  activeServerId: string | null;
 }
 
 export interface LanServerSettingsPort {

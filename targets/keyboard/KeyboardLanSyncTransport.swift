@@ -32,80 +32,105 @@ final class KeyboardLanSyncTransport: KeyboardSyncTransport {
 
     private let store: SettingsStore
     private lazy var history = HistoryLog(store: store)
-    private var configuration: Configuration?
-    private var client: KeyboardLanHttpClient?
-    private var lastSeenRemoteIdentity: String?
+    private var configurations: [Configuration] = []
+    private var clients: [String: KeyboardLanHttpClient] = [:]
+    private var lastSeenRemoteIdentity: [String: String] = [:]
 
     init(store: SettingsStore) {
         self.store = store
     }
 
     func synchronize(_ snapshot: DeviceClipboardSnapshot?) async throws -> KeyboardSyncResult {
-        let client = try currentClient()
+        let currentClients = try currentClients()
         var delivery: ExtensionDeliveryReport?
         if let snapshot {
-            try await client.publish(snapshot)
+            var accepted: UInt64 = 0
+            var offline: UInt64 = 0
+            var errored: UInt64 = 0
+            for (_, client) in currentClients {
+                do {
+                    try await client.publish(snapshot)
+                    accepted += 1
+                } catch KeyboardLanSyncError.unavailable {
+                    offline += 1
+                } catch {
+                    errored += 1
+                }
+            }
             delivery = ExtensionDeliveryReport(
                 entryId: snapshot.clipboard.contentId ?? snapshot.clipboard.hash ?? UUID().uuidString,
-                accepted: 1,
+                accepted: accepted,
                 duplicate: 0,
-                offline: 0,
-                errored: 0,
+                offline: offline,
+                errored: errored,
                 pending: 0
             )
         }
-        let remote = try await pullRemote(using: client, outgoing: snapshot?.clipboard)
+        let remote = try await pullRemote(using: currentClients, outgoing: snapshot?.clipboard)
         return KeyboardSyncResult(remoteChange: remote.map(KeyboardRemoteChange.snapshot), delivery: delivery)
     }
 
     func waitForRemoteChange(timeoutMs: UInt64) async throws -> KeyboardRemoteChange? {
         try await Task.sleep(nanoseconds: timeoutMs * 1_000_000)
         try Task.checkCancellation()
-        let remote = try await pullRemote(using: currentClient(), outgoing: nil)
+        let remote = try await pullRemote(using: currentClients(), outgoing: nil)
         return remote.map(KeyboardRemoteChange.snapshot)
     }
 
     func stop() {
-        client?.stop()
-        client = nil
-        configuration = nil
-        lastSeenRemoteIdentity = nil
+        clients.values.forEach { $0.stop() }
+        clients = [:]
+        configurations = []
+        lastSeenRemoteIdentity = [:]
     }
 
-    private func currentClient() throws -> KeyboardLanHttpClient {
+    private func currentClients() throws -> [(String, KeyboardLanHttpClient)] {
         let settings = store.loadAppSettings()
-        guard settings.syncChannel == .lan,
-              let activeId = settings.activeLanServerId,
-              let server = settings.lanServers.first(where: { $0.id == activeId }) else {
+        guard settings.syncChannel == .lan, !settings.lanServers.isEmpty else {
             throw KeyboardLanSyncError.notConfigured
         }
-        guard let password = try LanServerCredentialStore.password(serverId: activeId), !password.isEmpty else {
-            throw KeyboardLanSyncError.missingPassword
+        let nextConfigurations = try settings.lanServers.compactMap { server -> Configuration? in
+            guard let password = try LanServerCredentialStore.password(serverId: server.id),
+                  !password.isEmpty else { return nil }
+            return Configuration(server: server, password: password)
         }
-        let nextConfiguration = Configuration(server: server, password: password)
-        if configuration != nextConfiguration || client == nil {
-            client?.stop()
-            configuration = nextConfiguration
-            client = try KeyboardLanHttpClient(server: server, password: password)
-            lastSeenRemoteIdentity = nil
+        guard !nextConfigurations.isEmpty else { throw KeyboardLanSyncError.missingPassword }
+        if configurations != nextConfigurations {
+            clients.values.forEach { $0.stop() }
+            clients = Dictionary(uniqueKeysWithValues: try nextConfigurations.map { configuration in
+                (
+                    configuration.server.id,
+                    try KeyboardLanHttpClient(
+                        server: configuration.server,
+                        password: configuration.password
+                    )
+                )
+            })
+            configurations = nextConfigurations
+            lastSeenRemoteIdentity = [:]
         }
-        return client!
+        return settings.lanServers.compactMap { server in
+            clients[server.id].map { (server.id, $0) }
+        }
     }
 
     private func pullRemote(
-        using client: KeyboardLanHttpClient,
+        using clients: [(String, KeyboardLanHttpClient)],
         outgoing: Clipboard?
     ) async throws -> DeviceClipboardSnapshot? {
-        guard let remote = try await client.pull() else { return nil }
-        let identity = Self.identity(remote.clipboard)
-        if identity == lastSeenRemoteIdentity { return nil }
-        lastSeenRemoteIdentity = identity
-        if let outgoing, Self.sameContent(remote.clipboard, outgoing) { return nil }
-        if let hash = remote.clipboard.hash,
-           history.headHash()?.caseInsensitiveCompare(hash) == .orderedSame {
-            return nil
+        for (serverId, client) in clients {
+            guard let remote = try? await client.pull() else { continue }
+            let identity = Self.identity(remote.clipboard)
+            if identity == lastSeenRemoteIdentity[serverId] { continue }
+            lastSeenRemoteIdentity[serverId] = identity
+            if let outgoing, Self.sameContent(remote.clipboard, outgoing) { continue }
+            if let hash = remote.clipboard.hash,
+               history.headHash()?.caseInsensitiveCompare(hash) == .orderedSame {
+                continue
+            }
+            return remote
         }
-        return remote
+        return nil
     }
 
     private static func identity(_ clipboard: Clipboard) -> String {

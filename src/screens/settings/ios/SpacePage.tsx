@@ -127,6 +127,7 @@ export function SpacePage({
   onOpenInvitation,
   onOpenSetup,
   deviceManagement,
+  embedded = false,
 }: {
   initialDeviceId?: string;
   notificationNavigationRequestId?: number;
@@ -134,6 +135,7 @@ export function SpacePage({
   onOpenInvitation: () => void;
   onOpenSetup: (mode: AddSyncConnectionMode) => void;
   deviceManagement: SpaceDeviceManagementController;
+  embedded?: boolean;
 }) {
   const { t } = useTranslation('settingsSync');
   const [pending, setPending] = useState<PendingOperation>(null);
@@ -225,6 +227,142 @@ export function SpacePage({
   const isInitialLoading =
     !spaceId && !pending && (space.status === 'idle' || space.status === 'loading');
 
+  const content = (
+    <>
+      {isInitialLoading ? (
+        <Section>
+          <HStack spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>
+            <ProgressView />
+            <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
+              {t('state.loading', { ns: 'common' })}
+            </SwiftUIText>
+          </HStack>
+        </Section>
+      ) : null}
+
+      {!spaceId && !isInitialLoading ? (
+        <Section footer={<SwiftUIText>{t('space.footer')}</SwiftUIText>}>
+          <VStack spacing={12} alignment="center" modifiers={[frame({ maxWidth: Infinity })]}>
+            <Image systemName="person.2.wave.2.fill" size={48} color={settingsTileColors.indigo} />
+            <SwiftUIText modifiers={[font({ size: 22, weight: 'bold' })]}>
+              {t('space.empty.title')}
+            </SwiftUIText>
+            <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
+              {error ?? t('space.empty.body')}
+            </SwiftUIText>
+            <SwiftUIButton
+              systemImage="plus.circle.fill"
+              label={t('space.create.title')}
+              onPress={() => onOpenSetup('create')}
+              modifiers={[
+                ...iosProminentButtonModifiers(undefined, { fullWidth: true }),
+                controlSize('large'),
+              ]}
+            />
+            <SwiftUIButton
+              systemImage="link.circle.fill"
+              label={t('space.join.title')}
+              onPress={() => onOpenSetup('join')}
+              modifiers={[buttonStyle('bordered'), controlSize('large'), frame({ maxWidth: Infinity })]}
+            />
+          </VStack>
+        </Section>
+      ) : null}
+
+      {spaceId && error ? (
+        <Section>
+          <HStack spacing={8}>
+            <Image systemName="exclamationmark.circle.fill" size={17} color={settingsTileColors.red} />
+            <SwiftUIText modifiers={[foregroundStyle(settingsTileColors.red)]}>{error}</SwiftUIText>
+          </HStack>
+        </Section>
+      ) : null}
+
+      {spaceId ? (
+        <>
+          <Section footer={<SwiftUIText>{t('connection.p2pDescription')}</SwiftUIText>}>
+            <HStack spacing={12} alignment="center" modifiers={[frame({ maxWidth: Infinity })]}>
+              <SettingsIconTile systemName="person.2.fill" color={settingsTileColors.indigo} />
+              <VStack alignment="leading" spacing={3}>
+                <SwiftUIText modifiers={[font({ weight: 'semibold' })]}>
+                  {t(`space.overview.status.${deviceManagement.overview.primaryStatus}`)}
+                </SwiftUIText>
+                <SwiftUIText modifiers={[font({ size: 13 }), foregroundStyle('secondary')]}>
+                  {t('space.overview.memberCount', { count: overview.memberCount })}
+                </SwiftUIText>
+              </VStack>
+              <Spacer />
+              <Image systemName={overviewIcon} size={22} color={overviewColor} />
+            </HStack>
+          </Section>
+
+          <Section
+            header={
+              <HStack modifiers={[frame({ maxWidth: Infinity })]}>
+                <SwiftUIText>{t('space.devices.title')}</SwiftUIText>
+                <Spacer />
+                <SwiftUIText modifiers={[foregroundStyle('secondary')]}>{devices.length}</SwiftUIText>
+              </HStack>
+            }
+          >
+            {devices.length ? (
+              devices.map((device) => (
+                <SpaceDeviceRow
+                  key={device.deviceId}
+                  device={device}
+                  removing={deviceManagement.removing}
+                  manageHint={t('space.devices.manageHint')}
+                  thisDeviceLabel={t('space.devices.thisDevice')}
+                  onlineLabel={t('space.devices.online')}
+                  offlineLabel={t('space.devices.offline')}
+                  manageable
+                  onManage={() => deviceManagement.openDevice(device.deviceId)}
+                />
+              ))
+            ) : (
+              <HStack spacing={10}>
+                <Image systemName="person.2" size={18} color={settingsTileColors.gray} />
+                <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
+                  {t('space.devices.empty')}
+                </SwiftUIText>
+              </HStack>
+            )}
+          </Section>
+
+          <CustomRelaySection />
+
+          <Section footer={<SwiftUIText>{t('space.switch.description')}</SwiftUIText>}>
+            <SettingsNavRow
+              icon="arrow.triangle.2.circlepath"
+              iconColor={settingsTileColors.indigo}
+              title={t('space.switch.title')}
+              accessibilityHint={t('space.switch.description')}
+              onPress={() => onOpenSetup('switch')}
+              disabled={pending !== null || highImpactActionsDisabled}
+              showsPressFeedback={false}
+            />
+          </Section>
+
+          <Section footer={<SwiftUIText>{t('space.leave.confirm')}</SwiftUIText>}>
+            <SettingsNavRow
+              icon="rectangle.portrait.and.arrow.right"
+              iconColor={settingsTileColors.red}
+              title={t('space.leave.action')}
+              accessibilityHint={t('space.leave.confirm')}
+              onPress={leaveSpace}
+              destructive
+              disabled={pending !== null || highImpactActionsDisabled}
+              showsChevron={false}
+              showsPressFeedback={false}
+            />
+          </Section>
+        </>
+      ) : null}
+    </>
+  );
+
+  if (embedded) return content;
+
   return (
     <IosSheetPage
         title={t('space.title')}
@@ -245,139 +383,7 @@ export function SpacePage({
             : undefined
         }
       >
-        <IosSheetForm>
-          {isInitialLoading ? (
-            <Section>
-              <HStack spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>
-                <ProgressView />
-                <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
-                  {t('state.loading', { ns: 'common' })}
-                </SwiftUIText>
-              </HStack>
-            </Section>
-          ) : null}
-
-          {!spaceId && !isInitialLoading ? (
-            <Section footer={<SwiftUIText>{t('space.footer')}</SwiftUIText>}>
-              <VStack spacing={12} alignment="center" modifiers={[frame({ maxWidth: Infinity })]}>
-                <Image systemName="person.2.wave.2.fill" size={48} color={settingsTileColors.indigo} />
-                <SwiftUIText modifiers={[font({ size: 22, weight: 'bold' })]}>
-                  {t('space.empty.title')}
-                </SwiftUIText>
-                <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
-                  {error ?? t('space.empty.body')}
-                </SwiftUIText>
-                <SwiftUIButton
-                  systemImage="plus.circle.fill"
-                  label={t('space.create.title')}
-                  onPress={() => onOpenSetup('create')}
-                  modifiers={[
-                    ...iosProminentButtonModifiers(undefined, { fullWidth: true }),
-                    controlSize('large'),
-                  ]}
-                />
-                <SwiftUIButton
-                  systemImage="link.circle.fill"
-                  label={t('space.join.title')}
-                  onPress={() => onOpenSetup('join')}
-                  modifiers={[buttonStyle('bordered'), controlSize('large'), frame({ maxWidth: Infinity })]}
-                />
-              </VStack>
-            </Section>
-          ) : null}
-
-          {spaceId && error ? (
-            <Section>
-              <HStack spacing={8}>
-                <Image systemName="exclamationmark.circle.fill" size={17} color={settingsTileColors.red} />
-                <SwiftUIText modifiers={[foregroundStyle(settingsTileColors.red)]}>{error}</SwiftUIText>
-              </HStack>
-            </Section>
-          ) : null}
-
-          {spaceId ? (
-            <>
-              <Section footer={<SwiftUIText>{t('connection.p2pDescription')}</SwiftUIText>}>
-                <HStack spacing={12} alignment="center" modifiers={[frame({ maxWidth: Infinity })]}>
-                  <SettingsIconTile systemName="person.2.fill" color={settingsTileColors.indigo} />
-                  <VStack alignment="leading" spacing={3}>
-                    <SwiftUIText modifiers={[font({ weight: 'semibold' })]}>
-                      {t(`space.overview.status.${deviceManagement.overview.primaryStatus}`)}
-                    </SwiftUIText>
-                    <SwiftUIText modifiers={[font({ size: 13 }), foregroundStyle('secondary')]}>
-                      {t('space.overview.memberCount', { count: overview.memberCount })}
-                    </SwiftUIText>
-                  </VStack>
-                  <Spacer />
-                  <Image systemName={overviewIcon} size={22} color={overviewColor} />
-                </HStack>
-              </Section>
-
-              <Section
-                header={
-                  <HStack modifiers={[frame({ maxWidth: Infinity })]}>
-                    <SwiftUIText>{t('space.devices.title')}</SwiftUIText>
-                    <Spacer />
-                    <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
-                      {devices.length}
-                    </SwiftUIText>
-                  </HStack>
-                }
-              >
-                {devices.length ? (
-                  devices.map((device) => (
-                    <SpaceDeviceRow
-                      key={device.deviceId}
-                      device={device}
-                      removing={deviceManagement.removing}
-                      manageHint={t('space.devices.manageHint')}
-                      thisDeviceLabel={t('space.devices.thisDevice')}
-                      onlineLabel={t('space.devices.online')}
-                      offlineLabel={t('space.devices.offline')}
-                      manageable
-                      onManage={() => deviceManagement.openDevice(device.deviceId)}
-                    />
-                  ))
-                ) : (
-                  <HStack spacing={10}>
-                    <Image systemName="person.2" size={18} color={settingsTileColors.gray} />
-                    <SwiftUIText modifiers={[foregroundStyle('secondary')]}>
-                      {t('space.devices.empty')}
-                    </SwiftUIText>
-                  </HStack>
-                )}
-              </Section>
-
-              <CustomRelaySection />
-
-              <Section footer={<SwiftUIText>{t('space.switch.description')}</SwiftUIText>}>
-                <SettingsNavRow
-                  icon="arrow.triangle.2.circlepath"
-                  iconColor={settingsTileColors.indigo}
-                  title={t('space.switch.title')}
-                  accessibilityHint={t('space.switch.description')}
-                  onPress={() => onOpenSetup('switch')}
-                  disabled={pending !== null || highImpactActionsDisabled}
-                  showsPressFeedback={false}
-                />
-              </Section>
-
-              <Section footer={<SwiftUIText>{t('space.leave.confirm')}</SwiftUIText>}>
-                <SettingsNavRow
-                  icon="rectangle.portrait.and.arrow.right"
-                  iconColor={settingsTileColors.red}
-                  title={t('space.leave.action')}
-                  accessibilityHint={t('space.leave.confirm')}
-                  onPress={leaveSpace}
-                  destructive
-                  disabled={pending !== null || highImpactActionsDisabled}
-                  showsChevron={false}
-                  showsPressFeedback={false}
-                />
-              </Section>
-            </>
-          ) : null}
-        </IosSheetForm>
+        <IosSheetForm>{content}</IosSheetForm>
     </IosSheetPage>
   );
 }

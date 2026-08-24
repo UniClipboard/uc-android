@@ -29,7 +29,7 @@ describe('platform settings defaults', () => {
     const settings = createDefaultSettings('android');
 
     expect(settings.lanServers).toEqual([]);
-    expect(settings.activeLanServerId).toBeNull();
+    expect(settings).not.toHaveProperty('activeLanServerId');
   });
 
   it('enables test updates by default in an Android Alpha installation', () => {

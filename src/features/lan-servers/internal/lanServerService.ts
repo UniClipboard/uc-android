@@ -29,7 +29,6 @@ export class LanServerService {
     try {
       await this.dependencies.settings.write({
         servers,
-        activeServerId: current.activeServerId ?? profile.id,
       });
     } catch (error) {
       if (previousPassword !== null) {
@@ -61,26 +60,15 @@ export class LanServerService {
     if (existingIndex < 0) throw new Error('LAN server not found');
     const previousPassword = await this.dependencies.secrets.get(serverId);
     const servers = current.servers.filter((server) => server.id !== serverId);
-    const activeServerId =
-      current.activeServerId === serverId ? servers[0]?.id ?? null : current.activeServerId;
-
     await this.dependencies.secrets.delete(serverId);
     try {
-      await this.dependencies.settings.write({ servers, activeServerId });
+      await this.dependencies.settings.write({ servers });
     } catch (error) {
       if (previousPassword !== null) {
         await this.dependencies.secrets.set(serverId, previousPassword).catch(() => undefined);
       }
       throw error;
     }
-  }
-
-  async select(serverId: string): Promise<void> {
-    const current = await this.dependencies.settings.read();
-    if (!current.servers.some((server) => server.id === serverId)) {
-      throw new Error('LAN server not found');
-    }
-    await this.dependencies.settings.write({ ...current, activeServerId: serverId });
   }
 
   private profileFromDraft(id: string, draft: LanServerDraft): LanServerProfile {

@@ -43,7 +43,6 @@ const NativeModule = requireOptionalNativeModule<AppGroupStoreNativeModule>('App
 export interface AppSettingsDTO {
   syncChannel?: 'lan' | 'p2p';
   lanServers?: LanServerProfileDTO[];
-  activeLanServerId?: string | null;
   autoApplyRemoteChanges?: boolean;
   /** Accepted while importing settings written by older app versions. */
   autoApplyServerChanges?: boolean;

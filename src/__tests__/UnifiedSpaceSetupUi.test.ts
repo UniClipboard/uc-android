@@ -71,14 +71,16 @@ describe('unified space setup UI', () => {
     const iosPages = source('screens/settings/ios/types.ts');
 
     expect(androidHub).toContain('section="syncChannel"');
-    expect(androidSyncMethod).toContain("openSection('space')");
+    expect(androidSyncMethod).toContain('<UnifiedSpaceSetup />');
+    expect(androidSyncMethod).not.toContain("openSection('space')");
     expect(androidSubScreen).toContain("section === 'space' && (");
     expect(androidSubScreen).toContain('<UnifiedSpaceSetup');
     expect(androidSubScreen).toContain('initialDeviceId={route.params.deviceId}');
     expect(navigationTypes).toContain("| 'space'");
     expect(navigation).toContain("space: t('space.title', { ns: 'settingsSync' })");
     expect(iosRoot).toContain("onNavigate('syncChannel')");
-    expect(iosSyncMethod).toContain("onNavigate('space')");
+    expect(iosSyncMethod).toContain('<SpacePage');
+    expect(iosSyncMethod).not.toContain("onNavigate('space')");
     expect(iosScreen).toContain("activePage === 'space'");
     expect(iosScreen).toContain('<SpacePage');
     expect(iosPages).toContain("| 'space'");

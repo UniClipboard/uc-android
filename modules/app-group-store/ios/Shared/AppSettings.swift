@@ -29,7 +29,6 @@ public enum AppearanceMode: String, Codable, CaseIterable, Sendable {
 public struct AppSettings: Codable, Equatable, Hashable, Sendable {
     public var syncChannel: SyncChannel
     public var lanServers: [LanServerProfile]
-    public var activeLanServerId: String?
     public var autoCheckUpdate: Bool
     public var manualUploadDialogShown: Bool
     public var downloadRelativePath: String
@@ -98,7 +97,6 @@ public struct AppSettings: Codable, Equatable, Hashable, Sendable {
     public static let defaults = AppSettings(
         syncChannel: .lan,
         lanServers: [],
-        activeLanServerId: nil,
         autoCheckUpdate: true,
         manualUploadDialogShown: false,
         downloadRelativePath: "",
@@ -121,7 +119,6 @@ public struct AppSettings: Codable, Equatable, Hashable, Sendable {
     public init(
         syncChannel: SyncChannel = .lan,
         lanServers: [LanServerProfile] = [],
-        activeLanServerId: String? = nil,
         autoCheckUpdate: Bool = true,
         manualUploadDialogShown: Bool = false,
         downloadRelativePath: String = "",
@@ -142,7 +139,6 @@ public struct AppSettings: Codable, Equatable, Hashable, Sendable {
     ) {
         self.syncChannel = syncChannel
         self.lanServers = lanServers
-        self.activeLanServerId = activeLanServerId
         self.autoCheckUpdate = autoCheckUpdate
         self.manualUploadDialogShown = manualUploadDialogShown
         self.downloadRelativePath = downloadRelativePath
@@ -163,7 +159,7 @@ public struct AppSettings: Codable, Equatable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case syncChannel, lanServers, activeLanServerId
+        case syncChannel, lanServers
         case autoCheckUpdate, manualUploadDialogShown
         case downloadRelativePath, logViewLevelFilter, ignoredVersion
         case autoApplyRemoteChanges
@@ -182,7 +178,6 @@ public struct AppSettings: Codable, Equatable, Hashable, Sendable {
         let defaults = AppSettings.defaults
         syncChannel             = try container.decodeIfPresent(SyncChannel.self, forKey: .syncChannel) ?? defaults.syncChannel
         lanServers              = try container.decodeIfPresent([LanServerProfile].self, forKey: .lanServers) ?? defaults.lanServers
-        activeLanServerId       = try container.decodeIfPresent(String.self, forKey: .activeLanServerId)
         autoCheckUpdate         = try container.decodeIfPresent(Bool.self,   forKey: .autoCheckUpdate)         ?? defaults.autoCheckUpdate
         manualUploadDialogShown = try container.decodeIfPresent(Bool.self,   forKey: .manualUploadDialogShown) ?? defaults.manualUploadDialogShown
         downloadRelativePath    = try container.decodeIfPresent(String.self, forKey: .downloadRelativePath)    ?? defaults.downloadRelativePath
@@ -220,7 +215,6 @@ public struct AppSettings: Codable, Equatable, Hashable, Sendable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(syncChannel,             forKey: .syncChannel)
         try container.encode(lanServers,              forKey: .lanServers)
-        try container.encodeIfPresent(activeLanServerId, forKey: .activeLanServerId)
         try container.encode(autoCheckUpdate,         forKey: .autoCheckUpdate)
         try container.encode(manualUploadDialogShown, forKey: .manualUploadDialogShown)
         try container.encode(downloadRelativePath,    forKey: .downloadRelativePath)

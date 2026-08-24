@@ -42,15 +42,12 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
     if (!visible) setEditingServerId(null);
   }, [visible]);
 
-  const activeServer = servers.find((server) => server.isActive) ?? null;
-  const otherServers = servers.filter((server) => !server.isActive);
   const editorPage =
     editingServerId !== null ? (
       <LanServerEditorSheet
         visible
         embedded
         serverId={editingServerId !== 'new' ? editingServerId : null}
-        selectAfterSave={editingServerId === 'new'}
         onClose={() => setEditingServerId(null)}
       />
     ) : undefined;
@@ -89,19 +86,9 @@ export function LanMySpaceContent({ visible, onClose }: MySpaceSheetProps) {
         </Section>
       ) : null}
 
-      {activeServer ? (
-        <Section
-          header={
-            <SwiftUIText>{t('syncChannel.currentConnection', { ns: 'settings' })}</SwiftUIText>
-          }
-        >
-          <LanServerRow server={activeServer} onPress={() => setEditingServerId(activeServer.id)} />
-        </Section>
-      ) : null}
-
-      {otherServers.length > 0 ? (
+      {servers.length > 0 ? (
         <Section header={<SwiftUIText>{t('lan.title', { ns: 'settingsSync' })}</SwiftUIText>}>
-          {otherServers.map((server) => (
+          {servers.map((server) => (
             <LanServerRow
               key={server.id}
               server={server}
@@ -143,11 +130,7 @@ function LanServerRow({ server, onPress }: { server: LanMySpaceServerView; onPre
         </SwiftUIText>
       </VStack>
       <Spacer />
-      <Image
-        systemName={server.isActive ? 'checkmark' : 'chevron.right'}
-        size={13}
-        color={server.isActive ? ONLINE_COLOR : OFFLINE_COLOR}
-      />
+      <Image systemName="chevron.right" size={13} color={OFFLINE_COLOR} />
     </HStack>
   );
 }

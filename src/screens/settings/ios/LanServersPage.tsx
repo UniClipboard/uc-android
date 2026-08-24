@@ -9,14 +9,38 @@ export function LanServersPage({
   onBack,
   onAdd,
   onEdit,
+  embedded = false,
 }: {
   onBack(): void;
   onAdd(): void;
   onEdit(serverId: string): void;
+  embedded?: boolean;
 }) {
   const { t } = useTranslation('settingsSync');
   const servers = useSettingsStore((state) => state.config?.lanServers ?? []);
-  const activeServerId = useSettingsStore((state) => state.config?.activeLanServerId ?? null);
+
+  const content = (
+    <Section footer={<SwiftUIText>{t('lan.notAvailableYet')}</SwiftUIText>}>
+      {servers.length === 0 ? (
+        <SettingsNavRow
+          icon="plus.circle"
+          title={t('lan.add')}
+          showsChevron={false}
+          onPress={onAdd}
+        />
+      ) : (
+        servers.map((server) => (
+          <SettingsNavRow
+            key={server.id}
+            title={server.name || server.urls[0]}
+            onPress={() => onEdit(server.id)}
+          />
+        ))
+      )}
+    </Section>
+  );
+
+  if (embedded) return content;
 
   return (
     <IosSheetPage
@@ -24,27 +48,7 @@ export function LanServersPage({
       leftSlots={[<HeaderCircleButton key="back" systemName="chevron.left" onPress={onBack} />]}
       rightSlots={[<HeaderCircleButton key="add" systemName="plus" onPress={onAdd} />]}
     >
-      <IosSheetForm>
-        <Section footer={<SwiftUIText>{t('lan.notAvailableYet')}</SwiftUIText>}>
-          {servers.length === 0 ? (
-            <SettingsNavRow
-              icon="plus.circle"
-              title={t('lan.add')}
-              showsChevron={false}
-              onPress={onAdd}
-            />
-          ) : (
-            servers.map((server) => (
-              <SettingsNavRow
-                key={server.id}
-                title={server.name || server.urls[0]}
-                value={server.id === activeServerId ? t('lan.active') : undefined}
-                onPress={() => onEdit(server.id)}
-              />
-            ))
-          )}
-        </Section>
-      </IosSheetForm>
+      <IosSheetForm>{content}</IosSheetForm>
     </IosSheetPage>
   );
 }

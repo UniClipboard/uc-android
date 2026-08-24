@@ -36,11 +36,6 @@ export function migrateStoredSettings(raw: unknown, sourceSchemaVersion: number)
       currentLanServers,
       legacyServers.map(({ profile }) => profile)
     );
-    const activeServerIndex = toInteger(old.activeServerIndex);
-    result.activeLanServerId =
-      legacyServers.find(({ sourceIndex }) => sourceIndex === activeServerIndex)?.profile.id ??
-      result.activeLanServerId ??
-      legacyServers[0].profile.id;
   }
 
   result.syncChannel = resolveStoredSyncChannel(old, sourceSchemaVersion, legacyServers.length > 0);
@@ -169,8 +164,4 @@ function mergeLanServerProfiles(
     }
   }
   return merged;
-}
-
-function toInteger(value: unknown): number {
-  return typeof value === 'number' && Number.isInteger(value) ? value : -1;
 }

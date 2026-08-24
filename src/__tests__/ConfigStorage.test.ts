@@ -111,12 +111,11 @@ describe('ConfigStorage', () => {
         syncChannel: 'lan',
         autoApplyRemote: false,
         language: 'zh-CN',
-        activeLanServerId: expect.any(String),
       })
     );
     expect(config.lanServers).toEqual([
       {
-        id: config.activeLanServerId,
+        id: expect.any(String),
         name: 'Home',
         urls: ['http://192.168.1.8:5033', 'https://home.example.test'],
         username: 'mobile',
@@ -124,7 +123,7 @@ describe('ConfigStorage', () => {
       },
     ]);
     expect(config).not.toHaveProperty('legacyPairingGuide');
-    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'old-password');
+    expect(mockSetSecret).toHaveBeenCalledWith(config.lanServers[0].id, 'old-password');
     expect(mockClearLegacyLanConfiguration).toHaveBeenCalledTimes(1);
     expect(mockSetItem.mock.invocationCallOrder[0]).toBeLessThan(
       mockClearLegacyLanConfiguration.mock.invocationCallOrder[0]
@@ -174,7 +173,7 @@ describe('ConfigStorage', () => {
     await storage.initialize();
 
     const config = await storage.getConfig();
-    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'old-secret');
+    expect(mockSetSecret).toHaveBeenCalledWith(config.lanServers[0].id, 'old-secret');
     expect(mockRemoveItem).toHaveBeenCalledWith(credentialKey);
   });
 
@@ -203,7 +202,7 @@ describe('ConfigStorage', () => {
     await storage.initialize();
 
     const config = await storage.getConfig();
-    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'trailing-slash-secret');
+    expect(mockSetSecret).toHaveBeenCalledWith(config.lanServers[0].id, 'trailing-slash-secret');
     expect(mockRemoveItem).toHaveBeenCalledWith(credentialKey);
   });
 
@@ -245,7 +244,7 @@ describe('ConfigStorage', () => {
 
     await storage.initialize();
     await expect(storage.getConfig()).resolves.toEqual(
-      expect.objectContaining({ activeLanServerId: expect.any(String) })
+      expect.objectContaining({ lanServers: [expect.objectContaining({ id: expect.any(String) })] })
     );
     expect(values.has(migrationJournalKey)).toBe(true);
 
@@ -300,7 +299,6 @@ describe('ConfigStorage', () => {
 
     expect(JSON.parse(values.get(STORAGE_KEYS.CONFIG)!)).toEqual(
       expect.objectContaining({
-        activeLanServerId: expect.any(String),
         lanServers: [expect.objectContaining({ name: 'Home' })],
       })
     );
@@ -360,8 +358,8 @@ describe('ConfigStorage', () => {
         allowInsecureTls: true,
       }),
     ]);
-    expect(config.activeLanServerId).toBe(config.lanServers[0].id);
-    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'shared-password');
+    expect(config).not.toHaveProperty('activeLanServerId');
+    expect(mockSetSecret).toHaveBeenCalledWith(config.lanServers[0].id, 'shared-password');
     expect(mockClearLegacyLanConfiguration).toHaveBeenCalledTimes(1);
   });
 

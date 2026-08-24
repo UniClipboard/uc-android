@@ -60,7 +60,6 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
     visible: props.visible,
     serverId: props.serverId,
     initialIntent: props.initialIntent,
-    selectAfterSave: props.selectAfterSave,
     onFinished: props.onClose,
   });
   const requestClose = () => {
@@ -79,7 +78,7 @@ export function LanServerEditorSheet(props: LanServerEditorSheetProps) {
         <Column modifiers={[fillMaxSize(), imePadding()]}>
           <EditorHeader serverId={props.serverId} onClose={requestClose} />
           <HorizontalDivider color={colors.outlineVariant} />
-          <EditorForm editor={editor} serverId={props.serverId} />
+          <EditorForm editor={editor} />
           <EditorFooter
             editor={editor}
             serverId={props.serverId}
@@ -164,7 +163,7 @@ function EditorHeader({ serverId, onClose }: { serverId: string | null; onClose:
   );
 }
 
-function EditorForm({ editor, serverId }: { editor: EditorState; serverId: string | null }) {
+function EditorForm({ editor }: { editor: EditorState }) {
   const { t } = useTranslation('settingsSync');
   const colors = useMaterialColors();
   return (
@@ -261,18 +260,6 @@ function EditorForm({ editor, serverId }: { editor: EditorState; serverId: strin
           </ComposeText>
         </OutlinedButton>
         <ProbeResults editor={editor} />
-        {serverId && !editor.isActive ? (
-          <>
-            <Spacer modifiers={[height(20)]} />
-            <OutlinedButton
-              onClick={() => void editor.select()}
-              enabled={!editor.pending}
-              modifiers={[fillMaxWidth()]}
-            >
-              <ComposeText>{t('lan.makeActive')}</ComposeText>
-            </OutlinedButton>
-          </>
-        ) : null}
       </Column>
     </Column>
   );

@@ -13,7 +13,6 @@ export interface LanMySpaceServerView {
   name: string;
   address: string;
   addressCount: number;
-  isActive: boolean;
   status: LanMySpaceServerStatus;
 }
 
@@ -27,7 +26,6 @@ function serverStatus(results: Record<string, string>): LanMySpaceServerStatus {
 export function useLanMySpaceSheet(visible: boolean) {
   const configuredProfiles = useSettingsStore((state) => state.config?.lanServers);
   const profiles = configuredProfiles ?? EMPTY_LAN_SERVERS;
-  const activeServerId = useSettingsStore((state) => state.config?.activeLanServerId ?? null);
   const [statusById, setStatusById] = useState<Record<string, LanMySpaceServerStatus>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshGeneration = useRef(0);
@@ -75,10 +73,9 @@ export function useLanMySpaceSheet(visible: boolean) {
         name: profile.name || profile.urls[0],
         address: profile.urls[0],
         addressCount: profile.urls.length,
-        isActive: profile.id === activeServerId,
         status: statusById[profile.id] ?? (visible ? 'checking' : 'unknown'),
       })),
-    [activeServerId, profiles, statusById, visible]
+    [profiles, statusById, visible]
   );
 
   return {

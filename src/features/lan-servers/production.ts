@@ -10,13 +10,11 @@ export function configureProductionLanServerService(): void {
         const settings = await configStorage.getConfig();
         return {
           servers: settings.lanServers.map((server) => ({ ...server, urls: [...server.urls] })),
-          activeServerId: settings.activeLanServerId,
         };
       },
       async write(snapshot) {
         await configStorage.updateConfig({
           lanServers: snapshot.servers,
-          activeLanServerId: snapshot.activeServerId,
         });
       },
     },

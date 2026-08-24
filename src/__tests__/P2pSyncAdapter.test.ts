@@ -143,6 +143,21 @@ describe('P2pSyncAdapter', () => {
     });
   });
 
+  it('leaves automatic P2P target selection to the P2P implementation', async () => {
+    const P2pSyncAdapter = loadP2pSyncAdapter();
+    expect(P2pSyncAdapter).toBeDefined();
+    if (!P2pSyncAdapter) return;
+
+    const deps = dependencies();
+    const adapter = new P2pSyncAdapter(deps) as unknown as {
+      sendImportedText(text: string, profileHash: string): Promise<unknown>;
+    };
+
+    await adapter.sendImportedText('automatic', 'TEXT_HASH');
+
+    expect(deps.content.sendImportedText).toHaveBeenCalledWith('automatic', 'TEXT_HASH', undefined);
+  });
+
   it('maps generic targets when sending imported assets', async () => {
     const P2pSyncAdapter = loadP2pSyncAdapter();
     expect(P2pSyncAdapter).toBeDefined();

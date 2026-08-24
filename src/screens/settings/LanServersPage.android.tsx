@@ -19,7 +19,6 @@ export function LanServersPage() {
   const { t } = useTranslation('settingsSync');
   const colors = useMaterialColors();
   const servers = useSettingsStore((state) => state.config?.lanServers ?? []);
-  const activeServerId = useSettingsStore((state) => state.config?.activeLanServerId ?? null);
   const pendingIntent = usePendingLanConnectStore((state) => state.intent);
   const consumePendingIntent = usePendingLanConnectStore((state) => state.consume);
   const [editingServerId, setEditingServerId] = useState<string | 'new' | null>(null);
@@ -58,11 +57,7 @@ export function LanServersPage() {
                 modifiers={[clickable(() => setEditingServerId(server.id))]}
               >
                 <ListItem.LeadingContent>
-                  <Icon
-                    source={server.id === activeServerId ? ICONS.check : ICONS.server}
-                    size={24}
-                    tint={server.id === activeServerId ? colors.primary : colors.onSurfaceVariant}
-                  />
+                  <Icon source={ICONS.server} size={24} tint={colors.onSurfaceVariant} />
                 </ListItem.LeadingContent>
                 <ListItem.HeadlineContent>
                   <ComposeText>{server.name || server.urls[0]}</ComposeText>

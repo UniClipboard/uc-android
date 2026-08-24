@@ -29,7 +29,6 @@ let settingsState = {
   config: {
     enableForegroundNotification: false,
     syncChannel: 'lan' as 'lan' | 'p2p',
-    activeLanServerId: null,
     lanServers: [],
   },
   isTempDisabledBackgroundTasks: false,
@@ -94,7 +93,6 @@ describe('AppRuntime unified sync ownership', () => {
       config: {
         enableForegroundNotification: false,
         syncChannel: 'p2p',
-        activeLanServerId: 'lan-1',
         lanServers: [{ id: 'lan-1' }],
       },
     };

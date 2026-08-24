@@ -77,9 +77,14 @@ export function configureAppRuntime(): void {
       new LanSyncAdapter({
         async getServer(serverId?: string) {
           const config = useSettingsStore.getState().config;
-          const targetServerId = serverId ?? config?.activeLanServerId;
+          const targetServerId = serverId ?? config?.lanServers[0]?.id;
           if (!targetServerId) return null;
           return getLanServerService().getDraft(targetServerId);
+        },
+        async getServers() {
+          const serverIds =
+            useSettingsStore.getState().config?.lanServers.map(({ id }) => id) ?? [];
+          return Promise.all(serverIds.map((serverId) => getLanServerService().getDraft(serverId)));
         },
         readClipboard: () => clipboardManager.getClipboardContent(),
         applyRemoteContent: applyLanRemoteContent,

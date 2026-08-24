@@ -299,7 +299,6 @@
     "summary": "Gerencie conexões de sincronização",
     "configuredCount_one": "{{count}} servidor",
     "configuredCount_other": "{{count}} servidores",
-    "active": "Atual",
     "add": "Adicionar servidor",
     "edit": "Editar servidor",
     "scan": "Escanear código QR",
@@ -338,7 +337,6 @@
         "MissingFields": "Informe as credenciais"
       }
     },
-    "makeActive": "Definir como atual",
     "deleteTitle": "Excluir servidor",
     "deleteMessage": "Os dados do servidor e a senha serão removidos deste dispositivo.",
     "notAvailableYet": "Os dados da conexão ficam neste dispositivo e as senhas usam o armazenamento seguro do sistema.",

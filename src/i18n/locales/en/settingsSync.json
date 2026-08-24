@@ -299,7 +299,6 @@
     "summary": "Manage sync connections",
     "configuredCount_one": "{{count}} server",
     "configuredCount_other": "{{count}} servers",
-    "active": "Current",
     "add": "Add server",
     "edit": "Edit server",
     "scan": "Scan connection QR code",
@@ -338,7 +337,6 @@
         "MissingFields": "Enter credentials"
       }
     },
-    "makeActive": "Make current server",
     "deleteTitle": "Delete server",
     "deleteMessage": "The server details and saved password will be removed from this device.",
     "notAvailableYet": "Connection details stay on this device and passwords use secure system storage.",

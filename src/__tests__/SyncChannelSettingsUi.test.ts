@@ -21,7 +21,7 @@ describe('sync channel settings UI', () => {
     expect(iosRoot).not.toContain("pickerStyle('segmented')");
   });
 
-  it('owns selection and selected connection settings on platform sub-pages', () => {
+  it('owns selection and renders the selected connection settings inline', () => {
     const androidPage = fs.readFileSync(
       path.join(root, 'src/screens/settings/SyncChannelSection.android.tsx'),
       'utf8'
@@ -42,12 +42,20 @@ describe('sync channel settings UI', () => {
     expect(androidPage).toContain('ListItem modifiers={[clickable(');
     expect(androidPage).toContain('updateConfig({ syncChannel: channel })');
     expect(androidPage).toContain("syncChannel === 'lan'");
+    expect(androidPage).toContain('<LanServersPage />');
+    expect(androidPage).toContain('<UnifiedSpaceSetup />');
+    expect(androidPage).not.toContain("openSection('lanServers')");
+    expect(androidPage).not.toContain("openSection('space')");
     expect(androidOwner).toContain("section === 'syncChannel'");
     expect(iosPage).toContain('<SettingsNavRow');
     expect(iosPage).toContain("badge={t('syncChannel.experimental')}");
     expect(iosPage).toContain('selected={syncChannel ===');
     expect(iosPage).toContain('updateConfig({ syncChannel: channel })');
     expect(iosPage).toContain("syncChannel === 'lan'");
+    expect(iosPage).toContain('<LanServersPage');
+    expect(iosPage).toContain('<SpacePage');
+    expect(iosPage).not.toContain("onNavigate('lanServers')");
+    expect(iosPage).not.toContain("onNavigate('space')");
     expect(iosOwner).toContain("activePage === 'syncChannel'");
   });
 

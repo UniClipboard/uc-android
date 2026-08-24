@@ -195,11 +195,27 @@ describe('LAN server UI ownership', () => {
     );
   });
 
-  it('opens LAN server settings from the selected sync method pages', () => {
+  it('shows LAN server settings inside the selected sync method pages', () => {
     const iosPage = source('src/screens/settings/ios/SyncChannelPage.tsx');
     const androidPage = source('src/screens/settings/SyncChannelSection.android.tsx');
 
-    expect(iosPage).toContain("onNavigate('lanServers')");
-    expect(androidPage).toContain("openSection('lanServers')");
+    expect(iosPage).toContain('<LanServersPage');
+    expect(androidPage).toContain('<LanServersPage />');
+    expect(iosPage).not.toContain("onNavigate('lanServers')");
+    expect(androidPage).not.toContain("openSection('lanServers')");
+  });
+
+  it('does not expose a current LAN server selection', () => {
+    const androidEditor = source('src/components/LanServerEditorSheet.android.tsx');
+    const iosEditor = source('src/screens/settings/ios/LanServerEditorSheet.tsx');
+    const androidList = source('src/screens/settings/LanServersPage.android.tsx');
+    const iosList = source('src/screens/settings/ios/LanServersPage.tsx');
+    const editorState = source('src/features/lan-servers/useLanServerEditor.ts');
+
+    for (const content of [androidEditor, iosEditor, androidList, iosList, editorState]) {
+      expect(content).not.toContain('activeLanServerId');
+      expect(content).not.toContain('makeActive');
+      expect(content).not.toContain('isActive');
+    }
   });
 });

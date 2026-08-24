@@ -205,7 +205,20 @@ export const SettingsScreen = () => {
               {activePage ? (
                 <SettingsSubPageOverlay isLeaving={isLeavingPage} onExited={removeSubPage}>
                   {activePage === 'syncChannel' ? (
-                    <SyncChannelPage onBack={backToRoot} onNavigate={openSubPage} />
+                    <SyncChannelPage
+                      onBack={backToRoot}
+                      onAddLanServer={() => {
+                        setLanServerIntent(null);
+                        setEditingLanServerId('new');
+                      }}
+                      onEditLanServer={(serverId) => {
+                        setLanServerIntent(null);
+                        setEditingLanServerId(serverId);
+                      }}
+                      onOpenInvitation={() => setShowSpaceInvitation(true)}
+                      onOpenSetup={setSpaceSetupMode}
+                      deviceManagement={deviceManagement}
+                    />
                   ) : null}
                   {activePage === 'space' ? (
                     <SpacePage

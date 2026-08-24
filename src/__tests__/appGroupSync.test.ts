@@ -35,7 +35,6 @@ describe('App Group settings sync', () => {
         prefetchOnCellular: false,
         language: 'pt-BR',
         syncChannel: 'lan',
-        activeLanServerId: null,
         lanServers: [],
       })
     );
