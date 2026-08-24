@@ -872,7 +872,13 @@ final class KeyboardModel: ObservableObject {
         if let cached = thumbnailCache.object(forKey: key) { return cached }
         if let size = card.entry.size, size > 8 * 1024 * 1024 { return nil }
 
-        guard let data = store.loadImageData(hash: hash) else { return nil }
+        let data: Data?
+        if let current = await PayloadCache.shared.read(profileId: "Image-\(hash)"), !current.isEmpty {
+            data = current
+        } else {
+            data = store.loadImageData(hash: hash)
+        }
+        guard let data else { return nil }
         guard let img = Self.downsample(data: data, maxPixel: maxPixel) else { return nil }
         thumbnailCache.setObject(img, forKey: key)
         return img

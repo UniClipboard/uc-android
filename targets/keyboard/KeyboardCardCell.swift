@@ -12,6 +12,7 @@ final class KeyboardCardCell: UICollectionViewCell {
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
     private let imageView = UIImageView()
+    private let imagePlaceholderView = UIImageView()
     private let actedOverlay = UIView()
     private let actedLabel = UILabel()
     private var thumbnailTask: Task<Void, Never>?
@@ -58,6 +59,14 @@ final class KeyboardCardCell: UICollectionViewCell {
         imageView.layer.cornerCurve = .continuous
         imageView.tintColor = .secondaryLabel
         imageView.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
+        imagePlaceholderView.translatesAutoresizingMaskIntoConstraints = false
+        imagePlaceholderView.contentMode = .scaleAspectFit
+        imagePlaceholderView.clipsToBounds = true
+        imagePlaceholderView.layer.cornerRadius = 10
+        imagePlaceholderView.layer.cornerCurve = .continuous
+        imagePlaceholderView.tintColor = .secondaryLabel
+        imagePlaceholderView.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
+        imagePlaceholderView.image = UIImage(systemName: "photo")
 
         actedOverlay.translatesAutoresizingMaskIntoConstraints = false
         actedOverlay.backgroundColor = KeyboardSurface.itemUIColor.withAlphaComponent(0.94)
@@ -68,11 +77,13 @@ final class KeyboardCardCell: UICollectionViewCell {
         actedLabel.textAlignment = .center
         actedOverlay.addSubview(actedLabel)
 
-        [headerStack, titleLabel, subtitleLabel, imageView, actedOverlay].forEach(contentView.addSubview)
+        [headerStack, titleLabel, subtitleLabel, imageView, imagePlaceholderView, actedOverlay]
+            .forEach(contentView.addSubview)
         NSLayoutConstraint.activate([
             headerStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
             headerStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
             headerStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            headerStack.heightAnchor.constraint(equalToConstant: 20),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
             titleLabel.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: 8),
@@ -84,6 +95,10 @@ final class KeyboardCardCell: UICollectionViewCell {
             imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
             imageView.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: 8),
             imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            imagePlaceholderView.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
+            imagePlaceholderView.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
+            imagePlaceholderView.topAnchor.constraint(equalTo: imageView.topAnchor),
+            imagePlaceholderView.bottomAnchor.constraint(equalTo: imageView.bottomAnchor),
             actedOverlay.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             actedOverlay.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             actedOverlay.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -103,6 +118,8 @@ final class KeyboardCardCell: UICollectionViewCell {
         representedID = nil
         thumbnailRequest = nil
         imageView.image = nil
+        imageView.isHidden = true
+        imagePlaceholderView.isHidden = true
         activity.stopAnimating()
         actedOverlay.isHidden = true
     }
@@ -140,7 +157,8 @@ final class KeyboardCardCell: UICollectionViewCell {
         kindLabel.text = card.kindTitle
         kindLabel.textColor = tint
         subtitleLabel.isHidden = card.kind != .link
-        imageView.isHidden = card.kind != .image
+        imageView.isHidden = card.kind != .image || imageView.image == nil
+        imagePlaceholderView.isHidden = card.kind != .image || imageView.image != nil
         titleLabel.isHidden = card.kind == .image
 
         guard card.kind == .image else {
@@ -151,11 +169,15 @@ final class KeyboardCardCell: UICollectionViewCell {
         guard !retainsThumbnail else { return }
         thumbnailTask?.cancel()
         thumbnailTask = nil
-        imageView.image = UIImage(systemName: "photo.badge.arrow.down")
+        imageView.image = nil
+        imageView.isHidden = true
+        imagePlaceholderView.isHidden = false
         thumbnailTask = Task { @MainActor [weak self] in
             let image = await loadThumbnail(card.id, 220)
             guard !Task.isCancelled, self?.representedID == card.id else { return }
-            self?.imageView.image = image ?? UIImage(systemName: "photo")
+            self?.imageView.image = image
+            self?.imageView.isHidden = image == nil
+            self?.imagePlaceholderView.isHidden = image != nil
         }
     }
 }
