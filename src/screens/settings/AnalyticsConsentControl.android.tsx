@@ -79,7 +79,7 @@ export function AnalyticsConsentControl(_: AnalyticsConsentControlProps) {
     <SettingsSectionItem title={t('analytics.sectionTitle')} footer={t('analytics.footer')}>
       <ListItem>
         <ListItem.LeadingContent>
-          <Icon source={ICONS.analytics} size={22} tint={colors.primary} />
+          <Icon source={ICONS.analytics} size={22} tint={colors.onSurfaceVariant} />
         </ListItem.LeadingContent>
         <ListItem.HeadlineContent>
           <ComposeText>{t('analytics.consentTitle')}</ComposeText>
@@ -98,7 +98,7 @@ export function AnalyticsConsentControl(_: AnalyticsConsentControlProps) {
       <HorizontalDivider />
       <ListItem>
         <ListItem.LeadingContent>
-          <Icon source={ICONS.reset} size={22} tint={colors.error} />
+          <Icon source={ICONS.reset} size={22} tint={colors.onSurfaceVariant} />
         </ListItem.LeadingContent>
         <ListItem.HeadlineContent>
           <ComposeText>{t('analytics.resetTitle')}</ComposeText>

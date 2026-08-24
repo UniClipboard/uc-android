@@ -141,6 +141,7 @@ describe('native Engine analytics hosts', () => {
     expect(android).toContain('source={ICONS.analytics}');
     expect(android).toContain('source={ICONS.reset}');
     expect(android.match(/<ListItem.LeadingContent>/g)).toHaveLength(2);
+    expect(android.match(/tint=\{colors\.onSurfaceVariant\}/g)).toHaveLength(2);
     expect(ios).toContain("from '@expo/ui/swift-ui'");
     expect(ios).toContain('setAnalyticsConsent');
     expect(ios).toContain('resetAnalyticsIdentity');
