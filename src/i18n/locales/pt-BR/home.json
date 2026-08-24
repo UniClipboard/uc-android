@@ -9,8 +9,8 @@
       "description": "Conectando aos dispositivos em {{space}}."
     },
     "online": {
-      "title": "Sua área de transferência está sincronizada",
-      "description": "Copie algo em qualquer dispositivo pareado e aparecerá aqui."
+      "title": "Nada por aqui ainda",
+      "description": "Copie ou adicione algo e aparecerá aqui."
     },
     "offline": {
       "title": "Os dispositivos em {{space}} estão offline",

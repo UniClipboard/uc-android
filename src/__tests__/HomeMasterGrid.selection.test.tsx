@@ -1,6 +1,8 @@
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 import { createDefaultClipboardItem, type ClipboardItem } from '@/types/clipboard';
+import zhHome from '@/i18n/locales/zh/home.json';
+import enHome from '@/i18n/locales/en/home.json';
 
 jest.mock('@expo/vector-icons/Ionicons', () => {
   const ReactActual = require('react') as typeof import('react');
@@ -58,6 +60,17 @@ function item(profileHash: string): ClipboardItem {
 }
 
 describe('HomeMasterGrid 详情选择', () => {
+  it('uses a simple empty-history message', () => {
+    expect(zhHome.empty.online).toEqual({
+      title: '空空如也',
+      description: '复制或添加内容后，会出现在这里。',
+    });
+    expect(enHome.empty.online).toEqual({
+      title: 'Nothing here yet',
+      description: 'Copy or add something and it will appear here.',
+    });
+  });
+
   it('首次历史还没读完时不显示空状态', () => {
     const controller = {
       theme: {

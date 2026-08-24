@@ -9,8 +9,8 @@
       "description": "Connecting to devices in {{space}}."
     },
     "online": {
-      "title": "Your clipboard is in sync",
-      "description": "Copy something on any paired device and it'll appear here."
+      "title": "Nothing here yet",
+      "description": "Copy or add something and it will appear here."
     },
     "offline": {
       "title": "Devices in {{space}} are offline",

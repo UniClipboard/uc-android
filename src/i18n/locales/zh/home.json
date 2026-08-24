@@ -9,8 +9,8 @@
       "description": "正在连接 {{space}} 中的设备。"
     },
     "online": {
-      "title": "剪贴板已同步",
-      "description": "在任意已配对设备上复制内容，就会出现在这里。"
+      "title": "空空如也",
+      "description": "复制或添加内容后，会出现在这里。"
     },
     "offline": {
       "title": "{{space}} 中的设备暂时离线",

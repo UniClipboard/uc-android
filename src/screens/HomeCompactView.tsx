@@ -82,7 +82,9 @@ export function HomeCompactView({
       <View style={styles.gridArea}>
         {items.length === 0 && c.isInitialHistoryLoadComplete ? (
           <View style={styles.emptyState}>
-            <Ionicons name={c.emptyContent.icon} size={48} color={c.emptyContent.tint} />
+            <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surfaceHigh }]}>
+              <Ionicons name={c.emptyContent.icon} size={30} color={c.emptyContent.tint} />
+            </View>
             <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>
               {c.emptyContent.title}
             </Text>
@@ -192,13 +194,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     paddingTop: FILTER_CHIP_ROW_HEIGHT,
+    paddingBottom: 40,
     paddingHorizontal: 40,
   },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
   },
   emptyDesc: {
     fontSize: 14,

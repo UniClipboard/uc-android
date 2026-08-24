@@ -15,7 +15,6 @@ import { useErrorStore } from '@/stores/errorStore';
 import { notifyDeviceClipboardChanged } from '@/features/transfer';
 import { useUnifiedEngineStore } from '@/stores/unifiedEngineStore';
 import { useUnifiedSpaceStore } from '@/features/space';
-import { deriveP2pConnectionStatus } from '@/utils/connectionStatus';
 import { historyStorage } from '@/features/history';
 import { getUnifiedSyncRuntime } from '@/features/sync';
 import { getUnifiedSpaceService } from '@/features/space';
@@ -82,13 +81,7 @@ export function useHomeController(onOpenSettings: () => void) {
 
   const p2pSpaceId = useUnifiedSpaceStore((s) => s.spaceId);
 
-  const p2pStatus = useUnifiedEngineStore((s) => s.status);
-  const p2pPeerStatus = useUnifiedEngineStore((s) => s.peerConnectionStatus);
   const p2pRefreshRevision = useUnifiedEngineStore((s) => s.refreshRevision);
-  const connectionStatus = useMemo(
-    () => deriveP2pConnectionStatus(p2pStatus, p2pPeerStatus, p2pSpaceId !== null),
-    [p2pPeerStatus, p2pSpaceId, p2pStatus]
-  );
 
   // UI state
   const [refreshing, setRefreshing] = useState(false);
@@ -113,50 +106,15 @@ export function useHomeController(onOpenSettings: () => void) {
   // 详情会自动跟到新的第一张;若用户选的是非首项则为 false,新变化不打扰。用 ref 不触发重渲。
   const followFirstRef = useRef(true);
 
-  const activeSpaceLabel = t('settingsSync:space.title');
-
-  // 空状态文案：按连接语义给出「纯提示」，不带任何操作按钮
-  //（配对/重试/去设置等动作分别由顶栏空间入口、P2P 引擎自动重试、设置入口承担）
-  const emptyContent = useMemo(() => {
-    switch (connectionStatus) {
-      case 'unconfigured':
-        return {
-          icon: 'link-outline' as const,
-          title: t('empty.unconfigured.title'),
-          description: t('empty.unconfigured.description'),
-          tint: theme.colors.textSecondary,
-        };
-      case 'connecting':
-        return {
-          icon: 'sync-outline' as const,
-          title: t('empty.connecting.title'),
-          description: t('empty.connecting.description', { space: activeSpaceLabel }),
-          tint: theme.colors.textSecondary,
-        };
-      case 'offline':
-        return {
-          icon: 'cloud-offline-outline' as const,
-          title: t('empty.offline.title', { space: activeSpaceLabel }),
-          description: t('empty.offline.description'),
-          tint: theme.colors.textSecondary,
-        };
-      case 'error':
-        return {
-          icon: 'alert-circle-outline' as const,
-          title: t('empty.error.title'),
-          description: t('empty.error.description'),
-          tint: theme.colors.error,
-        };
-      case 'online':
-      default:
-        return {
-          icon: 'clipboard-outline' as const,
-          title: t('empty.online.title'),
-          description: t('empty.online.description'),
-          tint: theme.colors.textSecondary,
-        };
-    }
-  }, [connectionStatus, activeSpaceLabel, t, theme.colors.textSecondary, theme.colors.error]);
+  const emptyContent = useMemo(
+    () => ({
+      icon: 'clipboard-outline' as const,
+      title: t('empty.online.title'),
+      description: t('empty.online.description'),
+      tint: theme.colors.textSecondary,
+    }),
+    [t, theme.colors.textSecondary]
+  );
 
   const listRef = useRef<AnimatedCardGridHandle>(null);
 
@@ -743,9 +701,7 @@ export function useHomeController(onOpenSettings: () => void) {
     handleClearFilterKinds,
     showFilterSheet,
     setShowFilterSheet,
-    // space connection
-    activeSpaceLabel,
-    connectionStatus,
+    // space
     p2pSpaceId,
     showMySpace,
     setShowMySpace,

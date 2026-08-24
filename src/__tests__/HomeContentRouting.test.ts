@@ -37,8 +37,8 @@ describe('home content routing', () => {
     );
   });
 
-  it('derives connection status from the P2P engine', () => {
-    expect(controller).toContain('deriveP2pConnectionStatus');
+  it('keeps the empty history message independent from connection status', () => {
+    expect(controller).not.toContain('deriveP2pConnectionStatus');
     expect(controller).toContain('useUnifiedEngineStore');
     expect(controller).not.toContain('syncChannel');
     expect(controller).not.toContain('refreshSelectedConnection');
