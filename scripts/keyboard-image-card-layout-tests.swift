@@ -59,11 +59,28 @@ private enum KeyboardImageCardLayoutTests {
             guard abs(header.frame.minY - 12) < 0.5 else {
                 throw TestFailure.mismatch("header must start at y=12, got \(header.frame)")
             }
+            guard header.isHidden else {
+                throw TestFailure.mismatch("immersive image card must not show type or time metadata")
+            }
+            guard let edgeShade = cell.contentView.subviews.first(where: {
+                $0.accessibilityIdentifier == "keyboard.imageEdgeShade"
+            }), !edgeShade.isHidden, !edgeShade.isUserInteractionEnabled else {
+                throw TestFailure.mismatch("immersive image card must show a non-interactive edge shade")
+            }
             guard header.frame.height < 30 else {
                 throw TestFailure.mismatch("header must stay compact, got \(header.frame)")
             }
             guard imageBody.frame.height > 80 else {
                 throw TestFailure.mismatch("image body must fill the remaining card, got \(imageBody.frame)")
+            }
+            let imageFrame = imageBody.frame
+            let cardBounds = cell.contentView.bounds
+            guard abs(imageFrame.minX - cardBounds.minX) < 2,
+                  abs(imageFrame.minY - cardBounds.minY) < 2,
+                  abs(imageFrame.maxX - cardBounds.maxX) < 2,
+                  abs(imageFrame.maxY - cardBounds.maxY) < 2
+            else {
+                throw TestFailure.mismatch("immersive image must fill the entire card, got \(imageBody.frame)")
             }
 
             print("PASS: keyboard image card layout")

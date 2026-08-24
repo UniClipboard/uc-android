@@ -1,5 +1,31 @@
 import UIKit
 
+private final class KeyboardImageEdgeShadeView: UIView {
+    private let gradient = CAGradientLayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        accessibilityIdentifier = "keyboard.imageEdgeShade"
+        gradient.colors = [
+            UIColor.black.withAlphaComponent(0.16).cgColor,
+            UIColor.clear.cgColor,
+            UIColor.clear.cgColor,
+            UIColor.black.withAlphaComponent(0.16).cgColor,
+        ]
+        gradient.locations = [0, 0.24, 0.76, 1]
+        layer.addSublayer(gradient)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        gradient.frame = bounds
+    }
+}
+
 @MainActor
 final class KeyboardCardCell: UICollectionViewCell {
     static let reuseIdentifier = "KeyboardCardCell"
@@ -13,6 +39,7 @@ final class KeyboardCardCell: UICollectionViewCell {
     private let subtitleLabel = UILabel()
     private let imageView = UIImageView()
     private let imagePlaceholderView = UIImageView()
+    private let imageEdgeShadeView = KeyboardImageEdgeShadeView()
     private let actedOverlay = UIView()
     private let actedLabel = UILabel()
     private var thumbnailTask: Task<Void, Never>?
@@ -55,18 +82,18 @@ final class KeyboardCardCell: UICollectionViewCell {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 10
-        imageView.layer.cornerCurve = .continuous
         imageView.tintColor = .secondaryLabel
         imageView.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
         imagePlaceholderView.translatesAutoresizingMaskIntoConstraints = false
-        imagePlaceholderView.contentMode = .scaleAspectFit
+        imagePlaceholderView.contentMode = .center
         imagePlaceholderView.clipsToBounds = true
-        imagePlaceholderView.layer.cornerRadius = 10
-        imagePlaceholderView.layer.cornerCurve = .continuous
         imagePlaceholderView.tintColor = .secondaryLabel
         imagePlaceholderView.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
-        imagePlaceholderView.image = UIImage(systemName: "photo")
+        imagePlaceholderView.image = UIImage(
+            systemName: "photo",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 28, weight: .medium)
+        )
+        imageEdgeShadeView.translatesAutoresizingMaskIntoConstraints = false
 
         actedOverlay.translatesAutoresizingMaskIntoConstraints = false
         actedOverlay.backgroundColor = KeyboardSurface.itemUIColor.withAlphaComponent(0.94)
@@ -77,7 +104,7 @@ final class KeyboardCardCell: UICollectionViewCell {
         actedLabel.textAlignment = .center
         actedOverlay.addSubview(actedLabel)
 
-        [headerStack, titleLabel, subtitleLabel, imageView, imagePlaceholderView, actedOverlay]
+        [imageView, imagePlaceholderView, imageEdgeShadeView, headerStack, titleLabel, subtitleLabel, actedOverlay]
             .forEach(contentView.addSubview)
         NSLayoutConstraint.activate([
             headerStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
@@ -91,14 +118,18 @@ final class KeyboardCardCell: UICollectionViewCell {
             subtitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
             subtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
             subtitleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
-            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            imageView.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: 8),
-            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
             imagePlaceholderView.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
             imagePlaceholderView.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
             imagePlaceholderView.topAnchor.constraint(equalTo: imageView.topAnchor),
             imagePlaceholderView.bottomAnchor.constraint(equalTo: imageView.bottomAnchor),
+            imageEdgeShadeView.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
+            imageEdgeShadeView.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
+            imageEdgeShadeView.topAnchor.constraint(equalTo: imageView.topAnchor),
+            imageEdgeShadeView.bottomAnchor.constraint(equalTo: imageView.bottomAnchor),
             actedOverlay.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             actedOverlay.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             actedOverlay.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -120,6 +151,7 @@ final class KeyboardCardCell: UICollectionViewCell {
         imageView.image = nil
         imageView.isHidden = true
         imagePlaceholderView.isHidden = true
+        imageEdgeShadeView.isHidden = true
         activity.stopAnimating()
         actedOverlay.isHidden = true
     }
@@ -156,9 +188,12 @@ final class KeyboardCardCell: UICollectionViewCell {
         kindIcon.tintColor = tint
         kindLabel.text = card.kindTitle
         kindLabel.textColor = tint
+        timeLabel.textColor = .tertiaryLabel
+        headerStack.isHidden = card.kind == .image
         subtitleLabel.isHidden = card.kind != .link
         imageView.isHidden = card.kind != .image || imageView.image == nil
         imagePlaceholderView.isHidden = card.kind != .image || imageView.image != nil
+        imageEdgeShadeView.isHidden = card.kind != .image
         titleLabel.isHidden = card.kind == .image
 
         guard card.kind == .image else {
