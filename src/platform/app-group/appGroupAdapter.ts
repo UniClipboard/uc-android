@@ -2,7 +2,18 @@ import { Platform } from 'react-native';
 import { saveSettings } from 'app-group-store';
 import type { AppSettings } from '@/types/settings';
 
+export interface AppGroupLanServerDTO {
+  id: string;
+  name: string;
+  urls: string[];
+  username: string;
+  allowInsecureTls: boolean;
+}
+
 export interface AppGroupSettingsDTO {
+  syncChannel?: 'lan' | 'p2p';
+  lanServers?: AppGroupLanServerDTO[];
+  activeLanServerId?: string | null;
   autoApplyRemoteChanges?: boolean;
   autoPushDeviceChanges?: boolean;
   prefetchAttachments?: boolean;
@@ -22,6 +33,9 @@ export function mapSettingsToAppGroupDTO(settings: AppSettings): AppGroupSetting
   const prefetch = mapAttachmentPrefetch(settings.attachmentAutoDownload);
 
   return {
+    syncChannel: settings.syncChannel,
+    lanServers: settings.lanServers.map((server) => ({ ...server, urls: [...server.urls] })),
+    activeLanServerId: settings.activeLanServerId,
     autoApplyRemoteChanges: settings.autoApplyRemote,
     autoPushDeviceChanges: settings.autoPushLocal,
     prefetchAttachments: prefetch.attachments,

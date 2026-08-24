@@ -34,6 +34,9 @@ describe('App Group settings sync', () => {
         prefetchAttachments: false,
         prefetchOnCellular: false,
         language: 'pt-BR',
+        syncChannel: 'lan',
+        activeLanServerId: null,
+        lanServers: [],
       })
     );
   });

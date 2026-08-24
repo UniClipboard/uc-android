@@ -27,6 +27,9 @@ interface AppGroupStoreNativeModule {
     errorCode: string | null
   ): Promise<void>;
   importPayloadFile(profileId: string, sourceUri: string): Promise<string | null>;
+  getLanServerPassword(serverId: string): Promise<string | null>;
+  setLanServerPassword(serverId: string, password: string): Promise<void>;
+  deleteLanServerPassword(serverId: string): Promise<void>;
 }
 
 interface NativeKeyboardStatus {
@@ -38,6 +41,9 @@ interface NativeKeyboardStatus {
 const NativeModule = requireOptionalNativeModule<AppGroupStoreNativeModule>('AppGroupStore');
 
 export interface AppSettingsDTO {
+  syncChannel?: 'lan' | 'p2p';
+  lanServers?: LanServerProfileDTO[];
+  activeLanServerId?: string | null;
   autoApplyRemoteChanges?: boolean;
   /** Accepted while importing settings written by older app versions. */
   autoApplyServerChanges?: boolean;
@@ -53,6 +59,14 @@ export interface AppSettingsDTO {
   logViewLevelFilter?: string;
   keyboardSoundFeedback?: boolean;
   keyboardHapticFeedback?: boolean;
+}
+
+export interface LanServerProfileDTO {
+  id: string;
+  name: string;
+  urls: string[];
+  username: string;
+  allowInsecureTls: boolean;
 }
 
 export interface LegacyMigrationResult {
@@ -182,6 +196,18 @@ function parseNativeJson<T>(json: string | undefined, fallback: T): T {
 
 export function saveSettings(settings: AppSettingsDTO): Promise<void> {
   return NativeModule?.saveSettings(JSON.stringify(settings)) ?? Promise.resolve();
+}
+
+export function getLanServerPassword(serverId: string): Promise<string | null> {
+  return NativeModule?.getLanServerPassword(serverId) ?? Promise.resolve(null);
+}
+
+export function setLanServerPassword(serverId: string, password: string): Promise<void> {
+  return NativeModule?.setLanServerPassword(serverId, password) ?? Promise.resolve();
+}
+
+export function deleteLanServerPassword(serverId: string): Promise<void> {
+  return NativeModule?.deleteLanServerPassword(serverId) ?? Promise.resolve();
 }
 
 export async function getSettings(): Promise<AppSettingsDTO> {

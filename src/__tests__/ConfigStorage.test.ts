@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   clearLegacyLanConfiguration,
+  getLanServerPassword,
   getLegacyLanConfiguration,
   getSettings,
+  setLanServerPassword,
 } from 'app-group-store';
 import { CONFIG_USER_STATE_KEY, ConfigStorage } from '../features/settings';
 import { DEFAULT_SETTINGS, SETTINGS_SCHEMA_VERSION, type AppSettings } from '../types/settings';
 import { STORAGE_KEYS } from '../types/storage';
-import * as SecureStore from 'expo-secure-store';
 
 const SETTINGS_SCHEMA_VERSION_KEY = '@syncclipboard:schema_version';
 const secureValues = new Map<string, string>();
@@ -39,8 +40,8 @@ describe('ConfigStorage', () => {
   const mockGetSettings = jest.mocked(getSettings);
   const mockGetLegacyLanConfiguration = jest.mocked(getLegacyLanConfiguration);
   const mockClearLegacyLanConfiguration = jest.mocked(clearLegacyLanConfiguration);
-  const mockSetSecret = jest.mocked(SecureStore.setItemAsync);
-  const mockGetSecret = jest.mocked(SecureStore.getItemAsync);
+  const mockSetSecret = jest.mocked(setLanServerPassword);
+  const mockGetSecret = jest.mocked(getLanServerPassword);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,9 +53,9 @@ describe('ConfigStorage', () => {
     mockGetLegacyLanConfiguration.mockResolvedValue(null);
     mockClearLegacyLanConfiguration.mockResolvedValue(undefined);
     secureValues.clear();
-    mockGetSecret.mockImplementation(async (key) => secureValues.get(key) ?? null);
-    mockSetSecret.mockImplementation(async (key, value) => {
-      secureValues.set(key, value);
+    mockGetSecret.mockImplementation(async (serverId) => secureValues.get(serverId) ?? null);
+    mockSetSecret.mockImplementation(async (serverId, value) => {
+      secureValues.set(serverId, value);
     });
   });
 
@@ -123,11 +124,7 @@ describe('ConfigStorage', () => {
       },
     ]);
     expect(config).not.toHaveProperty('legacyPairingGuide');
-    expect(mockSetSecret).toHaveBeenCalledWith(
-      `uniclip.lan.server.${config.activeLanServerId}`,
-      'old-password',
-      expect.any(Object)
-    );
+    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'old-password');
     expect(mockClearLegacyLanConfiguration).toHaveBeenCalledTimes(1);
     expect(mockSetItem.mock.invocationCallOrder[0]).toBeLessThan(
       mockClearLegacyLanConfiguration.mock.invocationCallOrder[0]
@@ -177,11 +174,7 @@ describe('ConfigStorage', () => {
     await storage.initialize();
 
     const config = await storage.getConfig();
-    expect(mockSetSecret).toHaveBeenCalledWith(
-      `uniclip.lan.server.${config.activeLanServerId}`,
-      'old-secret',
-      expect.any(Object)
-    );
+    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'old-secret');
     expect(mockRemoveItem).toHaveBeenCalledWith(credentialKey);
   });
 
@@ -210,11 +203,7 @@ describe('ConfigStorage', () => {
     await storage.initialize();
 
     const config = await storage.getConfig();
-    expect(mockSetSecret).toHaveBeenCalledWith(
-      `uniclip.lan.server.${config.activeLanServerId}`,
-      'trailing-slash-secret',
-      expect.any(Object)
-    );
+    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'trailing-slash-secret');
     expect(mockRemoveItem).toHaveBeenCalledWith(credentialKey);
   });
 
@@ -372,11 +361,7 @@ describe('ConfigStorage', () => {
       }),
     ]);
     expect(config.activeLanServerId).toBe(config.lanServers[0].id);
-    expect(mockSetSecret).toHaveBeenCalledWith(
-      `uniclip.lan.server.${config.activeLanServerId}`,
-      'shared-password',
-      expect.any(Object)
-    );
+    expect(mockSetSecret).toHaveBeenCalledWith(config.activeLanServerId, 'shared-password');
     expect(mockClearLegacyLanConfiguration).toHaveBeenCalledTimes(1);
   });
 

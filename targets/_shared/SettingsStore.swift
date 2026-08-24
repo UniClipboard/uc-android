@@ -177,7 +177,6 @@ public final class SettingsStore: @unchecked Sendable {
         guard let data = defaults.data(forKey: key),
               var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
-        object.removeValue(forKey: "syncChannel")
         object.removeValue(forKey: "trustInsecureCert")
         guard let sanitized = try? JSONSerialization.data(withJSONObject: object) else { return }
         defaults.set(sanitized, forKey: key)

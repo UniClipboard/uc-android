@@ -100,6 +100,9 @@ describe('app-group-store JS wrapper', () => {
       getPayloadStats: jest.fn().mockResolvedValue({ count: 1, totalSize: 42 }),
       importPayloadFile: jest.fn().mockResolvedValue('file:///group/payloads/File-HASH'),
       migrateLegacyContainer: jest.fn().mockResolvedValue({ migrated: true, keys: 2 }),
+      getLanServerPassword: jest.fn().mockResolvedValue('secret'),
+      setLanServerPassword: jest.fn().mockResolvedValue(undefined),
+      deleteLanServerPassword: jest.fn().mockResolvedValue(undefined),
       setPasteboardImageFromFile: jest.fn().mockResolvedValue(undefined),
     };
     jest.doMock('expo-modules-core', () => ({
@@ -112,6 +115,8 @@ describe('app-group-store JS wrapper', () => {
     await store.writePayload('Image-ABC', bytes);
     await store.deletePayload('Image-ABC');
     await store.clearPayloads();
+    await store.setLanServerPassword('home', 'secret');
+    await store.deleteLanServerPassword('old-home');
     await store.setPasteboardImageFromFile('file:///history/photo.png');
 
     expect(mockNativeModule.writePayload).toHaveBeenCalledWith('Image-ABC', bytes);
@@ -123,6 +128,9 @@ describe('app-group-store JS wrapper', () => {
       'File-HASH'
     );
     await expect(store.migrateLegacyContainer()).resolves.toEqual({ migrated: true, keys: 2 });
+    await expect(store.getLanServerPassword('home')).resolves.toBe('secret');
+    expect(mockNativeModule.setLanServerPassword).toHaveBeenCalledWith('home', 'secret');
+    expect(mockNativeModule.deleteLanServerPassword).toHaveBeenCalledWith('old-home');
     expect(mockNativeModule.setPasteboardImageFromFile).toHaveBeenCalledWith(
       'file:///history/photo.png'
     );
@@ -142,6 +150,9 @@ describe('app-group-store JS wrapper', () => {
     await expect(store.getContainerUrl()).resolves.toBeNull();
     await expect(store.getLegacyHistory()).resolves.toBeNull();
     await expect(store.getShareDiagnostics()).resolves.toBeNull();
+    await expect(store.getLanServerPassword('home')).resolves.toBeNull();
+    await expect(store.setLanServerPassword('home', 'secret')).resolves.toBeUndefined();
+    await expect(store.deleteLanServerPassword('home')).resolves.toBeUndefined();
     await expect(store.getPayloadStats()).resolves.toEqual({ count: 0, totalSize: 0 });
     await expect(store.claimOutboundShareJobs()).resolves.toEqual([]);
     await expect(store.migrateLegacyContainer()).resolves.toEqual({ migrated: false, keys: 0 });

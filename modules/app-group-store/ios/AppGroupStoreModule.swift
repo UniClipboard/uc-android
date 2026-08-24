@@ -21,6 +21,18 @@ public class AppGroupStoreModule: Module {
       return String(data: data, encoding: .utf8) ?? "{}"
     }
 
+    AsyncFunction("getLanServerPassword") { (serverId: String) throws -> String? in
+      try LanServerCredentialStore.loadAndMigratePassword(serverId: serverId)
+    }
+
+    AsyncFunction("setLanServerPassword") { (serverId: String, password: String) throws -> Void in
+      try LanServerCredentialStore.setPassword(password, serverId: serverId)
+    }
+
+    AsyncFunction("deleteLanServerPassword") { (serverId: String) throws -> Void in
+      try LanServerCredentialStore.deletePassword(serverId: serverId, includeLegacy: true)
+    }
+
     AsyncFunction("getLegacyLanConfiguration") { () -> String? in
       SettingsStore.loadLegacyLanConfigurationJSON()
     }
